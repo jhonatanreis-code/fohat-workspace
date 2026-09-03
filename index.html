@@ -652,6 +652,21 @@ var USERS = [
    em vários pontos) funcionando sem precisar ser reescrito. Só App() deve atribuir a ela. ---- */
 var CURRENT_USER_ID = null;
 var SESSION_KEY = "fohat_os_session_v1";
+/* ---- TEMA: guarda a preferência de tema (system/light/dark) escolhida em Configurações
+   para sobreviver a um F5/fechar-e-abrir o navegador — antes disso o tema voltava sempre
+   para "Automático" a cada atualização de página, porque o useState não lia de lugar
+   nenhum. Mesmo padrão try/catch de saveSession/loadSessionUserId acima (modo privado /
+   localStorage bloqueado não deve quebrar o app, só deixa de lembrar o tema). ---- */
+var THEME_KEY = "fohat_theme_v1";
+function loadTheme(){
+  try{
+    var t = localStorage.getItem(THEME_KEY);
+    return (t === "light" || t === "dark" || t === "system") ? t : "system";
+  }catch(err){ return "system"; }
+}
+function saveTheme(theme){
+  try{ localStorage.setItem(THEME_KEY, theme); }catch(err){ /* localStorage indisponível — preferência só dura a sessão atual */ }
+}
 function saveSession(userId, remember){
   try{
     var payload = JSON.stringify({userId:userId, ts:Date.now()});
@@ -3208,7 +3223,7 @@ function App(){
   var detailIdState = useState(null); var detailId = detailIdState[0], setDetailId = detailIdState[1];
   var collapsedState = useState(false); var sidebarCollapsed = collapsedState[0], setSidebarCollapsed = collapsedState[1];
   var mobileNavState = useState(false); var mobileNavOpen = mobileNavState[0], setMobileNavOpen = mobileNavState[1];
-  var themeState = useState("system"); var theme = themeState[0], setThemeState = themeState[1];
+  var themeState = useState(loadTheme); var theme = themeState[0], setThemeState = themeState[1];
 
   /* ---- SESSÃO / LOGIN (Etapa 05 — Supabase Auth de verdade) ----
      sessionUserId continua sendo o único "state" React da autenticação (mesmo padrão de
@@ -3372,6 +3387,7 @@ function App(){
     var root = document.documentElement;
     if (theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", theme);
+    saveTheme(theme);
   }, [theme]);
 
   var projectsById = useMemo(function(){

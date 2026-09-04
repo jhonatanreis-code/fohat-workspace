@@ -538,6 +538,30 @@
     .login-welcome-brand{font-size:21px;}
   }
 
+  /* ---------------- Seletor de workspace / Termo de uso Ferramentaria ---------------- */
+  .ws-panel{max-width:620px;}
+  .ws-topbar{display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:2px;}
+  .ws-user-chip{display:flex; align-items:center; gap:9px; min-width:0;}
+  .ws-user-chip .name{color:#fff; font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ws-user-chip .email{color:rgba(255,255,255,.5); font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .ws-logout-link{color:rgba(255,255,255,.55); font-size:12px; cursor:pointer; background:none; border:none; display:flex; align-items:center; gap:5px; flex:0 0 auto; padding:4px;}
+  .ws-logout-link:hover{color:#fff;}
+  .ws-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:20px;}
+  @media (max-width:640px){.ws-grid{grid-template-columns:1fr;}}
+  .ws-card{
+    display:flex; flex-direction:column; gap:10px; text-align:left; cursor:pointer;
+    background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.12); border-radius:14px;
+    padding:20px 18px; color:#fff; transition:background .15s ease, border-color .15s ease, transform .1s ease;
+  }
+  .ws-card:hover:not(.ws-card-locked){background:rgba(255,255,255,.09); border-color:var(--fohat-accent); transform:translateY(-1px);}
+  .ws-card-icon{width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:rgba(41,169,230,.16); color:var(--fohat-accent); flex:0 0 auto;}
+  .ws-card-title{font-size:15px; font-weight:800;}
+  .ws-card-desc{font-size:12px; color:rgba(255,255,255,.6); line-height:1.5; flex:1 1 auto;}
+  .ws-card-locked{opacity:.5; cursor:not-allowed;}
+  .ws-card-locked:hover{transform:none;}
+  .ws-card-lock-note{font-size:11px; color:rgba(255,255,255,.45); display:flex; align-items:center; gap:5px; margin-top:2px;}
+  .ws-card-cta{font-size:11.5px; font-weight:700; color:var(--fohat-accent); display:flex; align-items:center; gap:5px; margin-top:2px;}
+
   /* ---------------- Usuários / Perfil ---------------- */
   .role-pill{font-size:10.5px; padding:3px 9px; border-radius:20px; font-weight:800; white-space:nowrap; display:inline-flex; align-items:center; letter-spacing:.02em;}
   .status-pill{font-size:10.5px; padding:3px 9px; border-radius:20px; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:5px;}
@@ -602,6 +626,8 @@ var ICON_PATHS = {
   target: ["M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z", "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9z", "M12 13.2a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4z"],
   logout: ["M9.5 20H6a1.5 1.5 0 0 1-1.5-1.5v-13A1.5 1.5 0 0 1 6 4h3.5", "M16.5 16.5 21 12l-4.5-4.5", "M21 12H9.5"],
   more: ["M5 12h.01", "M12 12h.01", "M19 12h.01"],
+  wrench: ["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"],
+  box: ["M3 8 12 4 21 8 21 16 12 20 3 16z", "M3 8 12 12 21 8", "M12 12v8"],
   mail: ["M4 6h16v12H4z", "M4.5 6.5 12 13l7.5-6.5"],
   lock: ["M6.5 11V8a5.5 5.5 0 0 1 11 0v3", "M5.5 11h13v9h-13z"],
   eye: ["M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z", "M12 14.7a2.7 2.7 0 1 0 0-5.4 2.7 2.7 0 0 0 0 5.4z"],
@@ -755,6 +781,99 @@ function initialsOf(nome){
   return (a+b).toUpperCase();
 }
 
+/* ============================== FERRAMENTARIA — permissões e metadados ==============================
+   Workspace novo, mesmo login. Uma pessoa pode ter acessoWorkspace (Gestão de Demandas) e/ou
+   acessoFerramentaria, de forma independente (ver mapProfileFromDb). Quem tem os dois vê uma tela de
+   escolha após o login (resolveInitialWorkspace); quem só tem um entra direto nele. ---- */
+function resolveInitialWorkspace(u){
+  if (!u) return null;
+  if (u.acessoWorkspace && u.acessoFerramentaria) return null;
+  if (u.acessoFerramentaria) return "ferramentaria";
+  if (u.acessoWorkspace) return "demandas";
+  return null;
+}
+function hasWorkspaceAccess(u){
+  u = u || findUser(CURRENT_USER_ID);
+  return !!u && !!u.acessoWorkspace;
+}
+function hasFerramentariaAccess(u){
+  u = u || findUser(CURRENT_USER_ID);
+  return !!u && !!u.acessoFerramentaria;
+}
+/* ALMOX_ADM (ou o Administrador do Workspace, quando também tem acesso à Ferramentaria) é quem
+   cadastra ferramentas/equipamentos, aprova reservas com autorização pendente e registra manutenção. */
+function isAlmoxAdmin(){
+  var u = findUser(CURRENT_USER_ID);
+  if (!u || !u.acessoFerramentaria) return false;
+  return u.ferramentariaPerfil === "ALMOX_ADM" || (!!u.acessoWorkspace && u.perfil === "ADMINISTRADOR");
+}
+function canGerenciarCatalogoFerramentas(){ return isAlmoxAdmin(); }
+function canRegistrarManutencao(){ return isAlmoxAdmin(); }
+function canRetirarFerramenta(){ return hasFerramentariaAccess(); }
+function canCancelarReserva(reserva){
+  var u = findUser(CURRENT_USER_ID);
+  if (!u || !reserva) return false;
+  if (isAlmoxAdmin()) return true;
+  return reserva.usuarioId === u.id;
+}
+
+var FERRAMENTARIA_LOCAL_LABEL = "Galpão Central — Fohat";
+var FERRAMENTA_CATEGORIAS = ["Elétrica","Manual","Medição","Outra"];
+var FERRAMENTA_STATUS_META = {
+  DISPONIVEL: {label:"Disponível", color:"var(--green)",   soft:"var(--green-soft)"},
+  EM_USO:     {label:"Em uso",     color:"var(--blue)",    soft:"var(--blue-soft)"},
+  MANUTENCAO: {label:"Manutenção", color:"var(--orange)",  soft:"var(--orange-soft)"},
+  EXTRAVIADA: {label:"Extraviada", color:"var(--crimson)", soft:"var(--crimson-soft)"}
+};
+var FERRAMENTA_STATUS_ORDER = ["DISPONIVEL","EM_USO","MANUTENCAO","EXTRAVIADA"];
+var RETIRADA_ESTADO_META = {
+  OK:         {label:"Devolvida OK",  color:"var(--green)",   soft:"var(--green-soft)"},
+  DANIFICADA: {label:"Danificada",    color:"var(--orange)",  soft:"var(--orange-soft)"},
+  INCOMPLETA: {label:"Incompleta",    color:"var(--bronze)",  soft:"var(--bronze-soft)"},
+  PERDIDA:    {label:"Perdida",       color:"var(--crimson)", soft:"var(--crimson-soft)"}
+};
+var RESERVA_STATUS_META = {
+  AGENDADA:             {label:"Agendada",              color:"var(--blue)",    soft:"var(--blue-soft)"},
+  CONVERTIDA:           {label:"Convertida em retirada",color:"var(--green)",   soft:"var(--green-soft)"},
+  CANCELADA:            {label:"Cancelada",             color:"var(--slate)",   soft:"var(--slate-soft)"},
+  PENDENTE_AUTORIZACAO: {label:"Aguardando autorização",color:"var(--bronze)",  soft:"var(--bronze-soft)"},
+  NEGADA:               {label:"Negada",                color:"var(--crimson)", soft:"var(--crimson-soft)"}
+};
+var RESERVA_DURACAO_MAX_DIAS = 30;
+/* Decide se uma reserva precisa de autorização do almoxarife antes de ser confirmada: reserva
+   longa demais (>30 dias) ou a mesma pessoa já tem outra reserva/retirada em aberto da mesma
+   ferramenta. Retorna "duracao"/"duplicada" (motivo) ou null (autorização automática). */
+function motivoAutorizacaoReserva(usuarioId, ferramentaId, dataInicio, dataFim, ignorarReservaId, reservasAtuais, retiradasAtuais){
+  var inicio = new Date(dataInicio), fim = new Date(dataFim);
+  var dias = (fim.getTime() - inicio.getTime()) / (1000*60*60*24);
+  if (dias > RESERVA_DURACAO_MAX_DIAS) return "duracao";
+  var duplicada = (reservasAtuais||[]).some(function(r){
+    return r.id !== ignorarReservaId && r.usuarioId === usuarioId && r.ferramentaId === ferramentaId
+      && (r.status === "AGENDADA" || r.status === "PENDENTE_AUTORIZACAO");
+  }) || (retiradasAtuais||[]).some(function(r){
+    return r.usuarioId === usuarioId && r.ferramentaId === ferramentaId && !r.devolvidoEm;
+  });
+  if (duplicada) return "duplicada";
+  return null;
+}
+function isRetiradaAtrasada(r){
+  return !r.devolvidoEm && !!r.previsaoDevolucao && new Date(r.previsaoDevolucao) < new Date();
+}
+
+var EQUIPAMENTO_CATEGORIAS = ["Notebook","Impressora","Monitor","Celular","Outro"];
+var EQUIPAMENTO_STATUS_META = {
+  DISPONIVEL:  {label:"Disponível",   color:"var(--green)",   soft:"var(--green-soft)"},
+  EM_USO:      {label:"Em uso",       color:"var(--blue)",    soft:"var(--blue-soft)"},
+  MANUTENCAO:  {label:"Manutenção",   color:"var(--orange)",  soft:"var(--orange-soft)"},
+  PERDA_TOTAL: {label:"Perda total",  color:"var(--crimson)", soft:"var(--crimson-soft)"}
+};
+var EQUIPAMENTO_MANUT_STATUS_META = {
+  SOLICITADA: {label:"Solicitada", color:"var(--bronze)",  soft:"var(--bronze-soft)"},
+  AGENDADA:   {label:"Agendada",   color:"var(--blue)",    soft:"var(--blue-soft)"},
+  CONCLUIDA:  {label:"Concluída",  color:"var(--green)",   soft:"var(--green-soft)"},
+  RECUSADA:   {label:"Recusada",   color:"var(--crimson)", soft:"var(--crimson-soft)"}
+};
+
 var DISCIPLINAS = ["Geral","Arquitetura","Elétrica","Hidráulica","Climatização","Incêndio","Estrutural","Automação","CCTV"];
 
 var STATUS_META = {
@@ -823,7 +942,16 @@ function mapProfileFromDb(row){
   return {
     id: row.id, nome: row.nome, cargo: row.cargo || "", iniciais: row.iniciais || initialsOf(row.nome||"?"),
     cor: row.cor || "#6d7889", email: row.email || "", telefone: row.telefone || "",
-    senha: null, perfil: row.perfil, status: row.status, ultimoAcesso: row.ultimo_acesso
+    senha: null, perfil: row.perfil, status: row.status, ultimoAcesso: row.ultimo_acesso,
+    /* Ferramentaria: colunas novas em profiles (ver schema_ferramentaria.sql). Tratadas de forma
+       defensiva (!== false / !!) para não quebrar a rotina de ninguém enquanto a migração ainda
+       não tiver sido rodada no banco — nesse meio-tempo o Supabase simplesmente não devolve essas
+       colunas, e o app se comporta como se todo mundo só tivesse acesso ao Workspace, como hoje. */
+    acessoWorkspace: row.acesso_workspace !== false,
+    acessoFerramentaria: !!row.acesso_ferramentaria,
+    ferramentariaPerfil: row.ferramentaria_perfil || null,
+    termosFerramentariaAceitos: !!row.termos_ferramentaria_aceitos,
+    termosFerramentariaAceitosEm: row.termos_ferramentaria_aceitos_em || null
   };
 }
 function mapProjetoFromDb(row, atividadesByProjeto, profilesById){
@@ -849,6 +977,81 @@ function mapDemandaFromDb(row, comentariosByDemanda, atividadesByDemanda, profil
 }
 function mapComentarioFromDb(row){ return {id: row.id, autorId: row.autor_id, texto: row.texto, data: row.criado_em}; }
 function mapAtividadeFromDb(row){ return {id: row.id, texto: row.texto, data: row.criado_em}; }
+
+/* ---- Ferramentaria: mesmo padrão de mapeadores acima (snake_case do banco -> camelCase do app). ---- */
+function mapObraFerramentariaFromDb(row){ return {id: row.id, nome: row.nome}; }
+function mapFerramentaFromDb(row){
+  return {
+    id: row.id, nome: row.nome, categoria: row.categoria, marca: row.marca || "", modelo: row.modelo || "",
+    numeroPatrimonio: row.numero_patrimonio || "", valorAquisicao: row.valor_aquisicao, dataAquisicao: row.data_aquisicao,
+    status: row.status, precisaCalibragem: !!row.precisa_calibragem, observacoes: row.observacoes || "",
+    criadoEm: row.criado_em, atualizadoEm: row.atualizado_em
+  };
+}
+function mapReservaFromDb(row){
+  return {
+    id: row.id, ferramentaId: row.ferramenta_id, usuarioId: row.usuario_id, obraId: row.obra_id,
+    dataInicio: row.data_inicio, dataFim: row.data_fim, status: row.status, criadaEm: row.criado_em
+  };
+}
+function mapRetiradaFromDb(row){
+  return {
+    id: row.id, ferramentaId: row.ferramenta_id, usuarioId: row.usuario_id, obraId: row.obra_id, reservaId: row.reserva_id,
+    retiradoEm: row.retirado_em, previsaoDevolucao: row.previsao_devolucao, devolvidoEm: row.devolvido_em,
+    estadoDevolucao: row.estado_devolucao, observacoes: row.observacoes || ""
+  };
+}
+function mapManutencaoFromDb(row){
+  return {
+    id: row.id, ferramentaId: row.ferramenta_id, tipo: row.tipo, dataInicio: row.data_inicio, dataFim: row.data_fim,
+    descricao: row.descricao || "", fornecedor: row.fornecedor || "", tipoServico: row.tipo_servico || "",
+    custo: row.custo, responsavelId: row.responsavel_id
+  };
+}
+function mapEquipamentoFromDb(row){
+  return {
+    id: row.id, nome: row.nome, categoria: row.categoria, numeroPatrimonio: row.numero_patrimonio || "",
+    responsavelId: row.responsavel_id, status: row.status, dataAquisicao: row.data_aquisicao,
+    observacoes: row.observacoes || ""
+  };
+}
+function mapEquipamentoManutencaoFromDb(row){
+  return {
+    id: row.id, equipamentoId: row.equipamento_id, solicitanteId: row.solicitante_id, motivo: row.motivo || "",
+    status: row.status, criadaEm: row.criado_em, agendadaEm: row.agendada_em, fornecedor: row.fornecedor || "",
+    tipoServico: row.tipo_servico || "", concluidaEm: row.concluida_em, responsavelAnteriorId: row.responsavel_anterior_id
+  };
+}
+/* Busca tudo da Ferramentaria no Supabase. Protegido só pela RLS (tem_acesso_ferramentaria()): quem
+   não tem acesso simplesmente recebe listas vazias, sem erro — por isso é seguro chamar isto sempre,
+   junto de fetchWorkspaceSnapshot(), mesmo para quem só usa o Workspace de Gestão de Demandas. */
+function fetchFerramentariaSnapshot(){
+  var sb = window.__FOHAT_SB__;
+  return Promise.all([
+    sb.from("ferramentaria_obras").select("*").order("nome", {ascending:true}),
+    sb.from("ferramentaria_ferramentas").select("*").order("nome", {ascending:true}),
+    sb.from("ferramentaria_reservas").select("*").order("data_inicio", {ascending:true}),
+    sb.from("ferramentaria_retiradas").select("*").order("retirado_em", {ascending:false}),
+    sb.from("ferramentaria_manutencoes").select("*").order("data_inicio", {ascending:false}),
+    sb.from("ferramentaria_equipamentos").select("*").order("nome", {ascending:true}),
+    sb.from("ferramentaria_equipamento_manutencoes").select("*").order("criado_em", {ascending:false})
+  ]).then(function(results){
+    var obrasRes=results[0], ferramentasRes=results[1], reservasRes=results[2], retiradasRes=results[3],
+        manutencoesRes=results[4], equipamentosRes=results[5], equipManutRes=results[6];
+    var firstError = obrasRes.error || ferramentasRes.error || reservasRes.error || retiradasRes.error
+      || manutencoesRes.error || equipamentosRes.error || equipManutRes.error;
+    if (firstError) throw firstError;
+    return {
+      obras: (obrasRes.data||[]).map(mapObraFerramentariaFromDb),
+      ferramentas: (ferramentasRes.data||[]).map(mapFerramentaFromDb),
+      reservas: (reservasRes.data||[]).map(mapReservaFromDb),
+      retiradas: (retiradasRes.data||[]).map(mapRetiradaFromDb),
+      manutencoes: (manutencoesRes.data||[]).map(mapManutencaoFromDb),
+      equipamentos: (equipamentosRes.data||[]).map(mapEquipamentoFromDb),
+      equipamentoManutencoes: (equipManutRes.data||[]).map(mapEquipamentoManutencaoFromDb)
+    };
+  });
+}
 
 /* Busca tudo de novo no Supabase e devolve {profiles, projects, demandas} já no formato que
    o app usa. Não mexe em nenhum state React — quem chama decide o que fazer com o resultado
@@ -2658,7 +2861,7 @@ function ConfigUsuariosTab(){
     e("div", {className:"simple-table-wrap"},
       e("table", {className:"demandas"},
         e("thead", null, e("tr", null,
-          e("th", null, "Usuário"), e("th", null, "E-mail"), e("th", null, "Cargo"), e("th", null, "Perfil"),
+          e("th", null, "Usuário"), e("th", null, "E-mail"), e("th", null, "Cargo"), e("th", null, "Acessos"), e("th", null, "Perfil"),
           e("th", null, "Status"), e("th", null, "Último acesso"), e("th", null, "Ações")
         )),
         e("tbody", null, users.map(function(u){
@@ -2748,6 +2951,10 @@ function UsuarioRow(props){
     e("td", null, e(AvatarName, {user:u, size:22})),
     e("td", {style:{color:"var(--text-2)"}}, u.email),
     e("td", null, u.cargo),
+    e("td", null, e("div",{style:{display:"flex", gap:5}},
+      u.acessoWorkspace ? e("span", {className:"pill", title:"Acesso ao Workspace", style:{background:"var(--blue-soft)", color:"var(--blue)"}}, e(Icon,{name:"folder",size:11}), "Workspace") : null,
+      u.acessoFerramentaria ? e("span", {className:"pill", title:"Acesso à Ferramentaria", style:{background:"var(--bronze-soft)", color:"var(--bronze)"}}, e(Icon,{name:"wrench",size:11}), "Ferramentaria") : null
+    )),
     e("td", null, e("span", {className:"role-pill", style:{background:ROLE_SOFT[u.perfil], color:ROLE_COLORS[u.perfil]}}, ROLE_LABELS[u.perfil])),
     e("td", null, e("span", {className:"status-pill", style: u.status==="ativo" ? {background:"var(--green-soft)", color:"var(--green)"} : {background:"var(--surface-3)", color:"var(--text-3)"}},
       e("span",{className:"pill-dot"}), u.status==="ativo" ? "Ativo" : "Inativo")),
@@ -2774,8 +2981,11 @@ function UsuarioFormModal(props){
   var editing = !!props.user;
   var initial = editing ? {
     nome:props.user.nome, email:props.user.email, cargo:props.user.cargo, telefone:props.user.telefone||"",
-    senha:"", confirmarSenha:"", perfil:props.user.perfil, status:props.user.status
-  } : {nome:"", email:"", cargo:"", telefone:"", senha:"", confirmarSenha:"", perfil:"COLABORADOR", status:"ativo"};
+    senha:"", confirmarSenha:"", perfil:props.user.perfil, status:props.user.status,
+    acessoWorkspace: !!props.user.acessoWorkspace, acessoFerramentaria: !!props.user.acessoFerramentaria,
+    ferramentariaPerfil: props.user.ferramentariaPerfil || "COLABORADOR"
+  } : {nome:"", email:"", cargo:"", telefone:"", senha:"", confirmarSenha:"", perfil:"COLABORADOR", status:"ativo",
+    acessoWorkspace:true, acessoFerramentaria:false, ferramentariaPerfil:"COLABORADOR"};
   var formState = useState(initial); var form = formState[0], setForm = formState[1];
   var errorState = useState(""); var error = errorState[0], setError = errorState[1];
   var busyState = useState(false); var busy = busyState[0], setBusy = busyState[1];
@@ -2788,14 +2998,17 @@ function UsuarioFormModal(props){
     if (!editing && !form.senha){ setError("Defina uma senha para o novo usuário."); return; }
     if (form.senha && form.senha !== form.confirmarSenha){ setError("As senhas não coincidem."); return; }
     if (form.senha && form.senha.length < 6){ setError("A senha deve ter pelo menos 6 caracteres."); return; }
+    if (!form.acessoWorkspace && !form.acessoFerramentaria){ setError("Marque ao menos um acesso: Workspace e/ou Ferramentaria."); return; }
     setBusy(true); setError("");
     var p;
     if (editing){
-      var patch = {nome:form.nome.trim(), email:form.email.trim(), cargo:form.cargo.trim(), telefone:form.telefone, perfil:form.perfil, status:form.status};
+      var patch = {nome:form.nome.trim(), email:form.email.trim(), cargo:form.cargo.trim(), telefone:form.telefone, perfil:form.perfil, status:form.status,
+        acessoWorkspace:form.acessoWorkspace, acessoFerramentaria:form.acessoFerramentaria, ferramentariaPerfil:form.ferramentariaPerfil};
       if (form.senha) patch.senha = form.senha;
       p = app.updateUsuario(props.user.id, patch);
     } else {
-      p = app.addUsuario({nome:form.nome.trim(), email:form.email.trim(), cargo:form.cargo.trim(), telefone:form.telefone, senha:form.senha, perfil:form.perfil, status:form.status});
+      p = app.addUsuario({nome:form.nome.trim(), email:form.email.trim(), cargo:form.cargo.trim(), telefone:form.telefone, senha:form.senha, perfil:form.perfil, status:form.status,
+        acessoWorkspace:form.acessoWorkspace, acessoFerramentaria:form.acessoFerramentaria, ferramentariaPerfil:form.ferramentariaPerfil});
     }
     p.then(function(res){
       setBusy(false);
@@ -2834,7 +3047,20 @@ function UsuarioFormModal(props){
         e("select", {value:form.status, onChange:function(ev){ set("status", ev.target.value); }},
           e("option", {value:"ativo"}, "Ativo"), e("option", {value:"inativo"}, "Inativo")))
     ),
-    e("p", {className:"hint"}, "A senha deve ter pelo menos 6 caracteres. Ela nunca é exibida depois de salva — para trocá-la mais tarde, use \"Alterar senha\".")
+    e("p", {className:"hint"}, "A senha deve ter pelo menos 6 caracteres. Ela nunca é exibida depois de salva — para trocá-la mais tarde, use \"Alterar senha\"."),
+    e("div", {className:"field", style:{borderTop:"1px solid var(--border)", paddingTop:12, marginTop:4}},
+      e("label",null,"Acesso a workspaces"),
+      e("label", {className:"login-check-row", style:{color:"var(--text-2)", marginBottom:6}},
+        e("input", {type:"checkbox", checked:form.acessoWorkspace, onChange:function(ev){ set("acessoWorkspace", ev.target.checked); }}),
+        e("span", null, e("b",null,"Gestão de Demandas"), " — projetos e demandas (pessoal de escritório)")),
+      e("label", {className:"login-check-row", style:{color:"var(--text-2)"}},
+        e("input", {type:"checkbox", checked:form.acessoFerramentaria, onChange:function(ev){ set("acessoFerramentaria", ev.target.checked); }}),
+        e("span", null, e("b",null,"Ferramentaria"), " — controle de ferramentas e equipamentos (pessoal de obra/almoxarifado)"))
+    ),
+    form.acessoFerramentaria ? e("div", {className:"field", style:{marginLeft:24, marginBottom:0}}, e("label",null,"Perfil na Ferramentaria"),
+      e("select", {value:form.ferramentariaPerfil, onChange:function(ev){ set("ferramentariaPerfil", ev.target.value); }},
+        e("option", {value:"COLABORADOR"}, "Colaborador"),
+        e("option", {value:"ALMOX_ADM"}, "Almoxarife administrador"))) : null
   );
 }
 
@@ -2959,6 +3185,15 @@ var SIDEBAR_MAIN = [
   {id:"concluidos", label:"Concluídos", icon:"checkcircle"},
   {id:"equipe", label:"Equipe", icon:"users"}
 ];
+var SIDEBAR_MAIN_FERRAMENTARIA = [
+  {id:"ferr_dashboard", label:"Dashboard", icon:"grid"},
+  {id:"ferr_catalogo", label:"Ferramentas", icon:"wrench"},
+  {id:"ferr_retiradas", label:"Retiradas & Reservas", icon:"box"},
+  {id:"ferr_manutencao", label:"Manutenção", icon:"settings"},
+  {id:"ferr_equipamentos", label:"Escritório", icon:"layout"},
+  {id:"ferr_calendario", label:"Calendário", icon:"calendar"},
+  {id:"ferr_equipe", label:"Equipe", icon:"users"}
+];
 var SIDEBAR_BOTTOM = [
   {id:"config", label:"Configurações", icon:"settings"},
   {id:"ajuda", label:"Ajuda", icon:"help"},
@@ -2968,10 +3203,14 @@ var SIDEBAR_BOTTOM = [
 function Sidebar(){
   var app = useApp();
   var page = app.route.page;
+  var isFerramentaria = app.workspace === "ferramentaria";
+  var mainItems = isFerramentaria ? SIDEBAR_MAIN_FERRAMENTARIA : SIDEBAR_MAIN;
   function countFor(id){
     if (id==="pendencias") return app.stats.aguardando + app.stats.bloqueadas;
     if (id==="revisao") return app.stats.emRevisao;
     if (id==="minhas") return app.demandas.filter(function(d){ return d.responsavelId===CURRENT_USER_ID && d.status!=="CONCLUIDO"; }).length;
+    if (id==="ferr_retiradas") return app.retiradas.filter(isRetiradaAtrasada).length + (isAlmoxAdmin() ? app.reservas.filter(function(r){ return r.status==="PENDENTE_AUTORIZACAO"; }).length : 0);
+    if (id==="ferr_manutencao") return app.ferramentas.filter(function(f){ return f.precisaCalibragem && f.status==="DISPONIVEL"; }).length;
     return null;
   }
   return e(React.Fragment, null,
@@ -2979,11 +3218,11 @@ function Sidebar(){
     e("div", {className:classNames("sidebar", app.sidebarCollapsed && "collapsed", app.mobileNavOpen && "mobile-open")},
       e("div", {className:"sidebar-top"},
         e("div", {className:"sidebar-logo"}, e("img", {src:window.__FOHAT_LOGO__, alt:"Fohat"})),
-        e("div", {className:"sidebar-brandtext"}, e("b",null,"FOHAT"), e("span",null,"Gestão de Demandas"))
+        e("div", {className:"sidebar-brandtext"}, e("b",null,"FOHAT"), e("span",null, isFerramentaria ? "Ferramentaria" : "Gestão de Demandas"))
       ),
       e("div", {className:"sidebar-nav"},
         e("div", {className:"sidebar-section-label"}, "Navegação"),
-        SIDEBAR_MAIN.map(function(item){
+        mainItems.map(function(item){
           var c = countFor(item.id);
           return e("button", {key:item.id, className:classNames("sidebar-item", page===item.id && "active"),
             onClick:function(){ app.navigate(item.id); app.setMobileNavOpen(false); }, title:item.label},
@@ -3013,13 +3252,17 @@ function breadcrumbFor(app){
     todas:["Início","Demandas","Todas as Demandas"], minhas:["Início","Demandas","Minhas Demandas"],
     revisao:["Início","Demandas","Em Revisão"], concluidos:["Início","Demandas","Concluídos"],
     calendario:["Início","Calendário"], pendencias:["Início","Pendências"], equipe:["Início","Equipe"],
-    config:["Início","Configurações"], ajuda:["Início","Ajuda"], perfil:["Início","Perfil"]
+    config:["Início","Configurações"], ajuda:["Início","Ajuda"], perfil:["Início","Perfil"],
+    ferr_dashboard:["Ferramentaria"], ferr_catalogo:["Ferramentaria","Ferramentas"],
+    ferr_retiradas:["Ferramentaria","Retiradas & Reservas"], ferr_manutencao:["Ferramentaria","Manutenção"],
+    ferr_equipamentos:["Ferramentaria","Escritório"], ferr_calendario:["Ferramentaria","Calendário"],
+    ferr_equipe:["Ferramentaria","Equipe"]
   };
   if (r.page === "projeto"){
     var p = app.projectsById[r.projectId];
     return ["Início","Projetos", p ? p.nome : "..."];
   }
-  return map[r.page] || ["Início"];
+  return map[r.page] || (app.workspace==="ferramentaria" ? ["Ferramentaria"] : ["Início"]);
 }
 
 function GlobalSearchResults(props){
@@ -3103,6 +3346,8 @@ function Header(){
           e("div", {className:"um-item", onClick:function(){ app.navigate("perfil"); setUserOpen(false); }}, e(Icon,{name:"user",className:"ic"}), "Perfil"),
           e("div", {className:"um-item", onClick:function(){ app.navigate("config"); setUserOpen(false); }}, e(Icon,{name:"settings",className:"ic"}), "Configurações"),
           e("div", {className:"um-item", onClick:function(){ app.navigate("ajuda"); setUserOpen(false); }}, e(Icon,{name:"help",className:"ic"}), "Ajuda"),
+          (currentUser.acessoWorkspace && currentUser.acessoFerramentaria) ?
+            e("div", {className:"um-item", onClick:function(){ setUserOpen(false); app.switchWorkspace(); }}, e(Icon,{name:"refresh",className:"ic"}), "Trocar de workspace") : null,
           e("div", {className:"um-item", style:{color:"var(--crimson)"}, onClick:function(){ setUserOpen(false); app.logout(); }}, e(Icon,{name:"logout",className:"ic"}), "Sair")
         ) : null
       )
@@ -3115,6 +3360,467 @@ function PageCalendarioGlobal(){
   return e("div", {className:"content-narrow"},
     e(PageHead, {title:"Calendário", subtitle:"Prazos e entregas de todos os projetos."}),
     e(CalendarView, {rows: app.demandas})
+  );
+}
+
+/* ============================== SELETOR DE WORKSPACE / TERMO DE USO ============================== */
+function WorkspaceSelectorScreen(props){
+  var app = props.app;
+  var u = app.currentUser;
+  var temFerramentaria = hasFerramentariaAccess(u);
+  return e("div", {className:"login-screen"},
+    e("div", {className:"login-bg", style:{backgroundImage:"url(" + window.__FOHAT_LOGIN_BG__ + ")"}}),
+    e("div", {className:"login-content"},
+      e("div", {className:"login-panel ws-panel"},
+        e("div", {className:"ws-topbar"},
+          e("div", {className:"ws-user-chip"}, e(Avatar,{user:u, size:30}),
+            e("div", null, e("div",{className:"name"}, u.nome), e("div",{className:"email"}, u.email))),
+          e("button", {type:"button", className:"ws-logout-link", onClick:app.logout}, e(Icon,{name:"logout",size:13}), "Sair")
+        ),
+        e("div", {className:"login-brand-line"}, e("span",null), e("span",null), e("span",null)),
+        e("h1", {className:"login-welcome"},
+          e("span", {className:"login-welcome-lead"}, "Escolha um"),
+          e("span", {className:"login-welcome-brand"}, "workspace ", e("span", {className:"login-welcome-accent"}, "FOHAT"))
+        ),
+        e("p", {className:"login-panel-sub"}, "Você pode alternar entre workspaces a qualquer momento pelo menu do seu perfil."),
+        e("div", {className:"ws-grid"},
+          e("button", {type:"button", className:"ws-card", onClick:function(){ app.setWorkspace("demandas"); }},
+            e("div", {className:"ws-card-icon"}, e(Icon,{name:"folder", size:20})),
+            e("div", {className:"ws-card-title"}, "Gestão de Demandas"),
+            e("div", {className:"ws-card-desc"}, "Projetos, demandas, prazos e equipe da operação de engenharia."),
+            e("div", {className:"ws-card-cta"}, "Entrar", e(Icon,{name:"chevronright", size:13}))
+          ),
+          e("button", {type:"button", className:classNames("ws-card", !temFerramentaria && "ws-card-locked"), disabled:!temFerramentaria,
+              onClick:function(){ if (temFerramentaria) app.setWorkspace("ferramentaria"); }},
+            e("div", {className:"ws-card-icon"}, e(Icon,{name:"wrench", size:20})),
+            e("div", {className:"ws-card-title"}, "Ferramentaria"),
+            e("div", {className:"ws-card-desc"}, "Controle de posse das ferramentas: quem retirou, quem reservou e o que está atrasado."),
+            temFerramentaria ? e("div", {className:"ws-card-cta"}, "Entrar", e(Icon,{name:"chevronright", size:13}))
+              : e("div", {className:"ws-card-lock-note"}, e(Icon,{name:"lock", size:12}), "Sem acesso a este workspace")
+          )
+        ),
+        e("div", {className:"login-footer"}, "© 2026 ", e("b",{className:"login-footer-brand"},"FOHAT"), " Engenharia e Instalações. Todos os direitos reservados.")
+      )
+    )
+  );
+}
+
+/* Termo de uso da Ferramentaria — bloqueia a entrada no workspace até o usuário aceitar, no
+   primeiro acesso. Só é exibido a quem tem acessoFerramentaria e ainda não aceitou (ver gate em App()). */
+function TermosFerramentariaScreen(props){
+  var app = props.app;
+  var u = app.currentUser;
+  var checkState = useState(false); var checked = checkState[0], setChecked = checkState[1];
+  var loadingState = useState(false); var loading = loadingState[0], setLoading = loadingState[1];
+  function concordar(){
+    if (!checked || loading) return;
+    setLoading(true);
+    Promise.resolve(app.onAceitar()).then(function(){ setLoading(false); });
+  }
+  return e("div", {className:"login-screen"},
+    e("div", {className:"login-bg", style:{backgroundImage:"url(" + window.__FOHAT_LOGIN_BG__ + ")"}}),
+    e("div", {className:"login-content"},
+      e("div", {className:"login-panel ws-panel"},
+        e("div", {className:"ws-topbar"},
+          e("div", {className:"ws-user-chip"}, e(Avatar,{user:u, size:30}),
+            e("div", null, e("div",{className:"name"}, u.nome), e("div",{className:"email"}, u.email))),
+          e("button", {type:"button", className:"ws-logout-link", onClick:app.logout}, e(Icon,{name:"logout",size:13}), "Sair")
+        ),
+        e("div", {className:"login-brand-line"}, e("span",null), e("span",null), e("span",null)),
+        e("h1", {className:"login-welcome"},
+          e("span", {className:"login-welcome-lead"}, "Antes de continuar"),
+          e("span", {className:"login-welcome-brand"}, "Termo de uso ", e("span", {className:"login-welcome-accent"}, "Ferramentaria"))
+        ),
+        e("p", {className:"login-panel-sub"}, "Leia e concorde com o termo de bom uso de ferramentas e equipamentos para acessar a Ferramentaria."),
+        e("div", {className:"panel-card", style:{margin:"14px 0", maxHeight:220, overflowY:"auto"}},
+          e("div", {style:{padding:16, display:"flex", flexDirection:"column", gap:10, fontSize:12.5, color:"var(--text-2)", lineHeight:1.55}},
+            e("p", null, "Ao retirar ou reservar uma ferramenta ou equipamento da Fohat Engenharia e Instalações, eu me comprometo a:"),
+            e("p", null, "1. Usar cada ferramenta ou equipamento apenas para as finalidades de trabalho a que se destina, seguindo as instruções de segurança do fabricante e da empresa."),
+            e("p", null, "2. Conservar o item em bom estado, comunicando imediatamente ao almoxarife qualquer avaria, defeito ou necessidade de manutenção."),
+            e("p", null, "3. Devolver a ferramenta ou equipamento no prazo combinado, ou solicitar extensão do prazo com antecedência quando necessário."),
+            e("p", null, "4. Responder pela guarda do item enquanto estiver em minha posse, evitando extravio, empréstimo a terceiros ou uso fora das obras/projetos da empresa."),
+            e("p", null, "5. Ressarcir a empresa, conforme as políticas internas, em caso de dano ou perda por mau uso comprovado."),
+            e("p", null, "Este aceite é registrado uma única vez e vale para toda ferramenta ou equipamento sob minha responsabilidade a partir de agora.")
+          )
+        ),
+        e("label", {className:"login-check-row", style:{marginBottom:14}},
+          e("input", {type:"checkbox", checked:checked, onChange:function(ev){ setChecked(ev.target.checked); }}),
+          "Li e concordo com os termos de uso e boas práticas acima."
+        ),
+        e("button", {type:"button", className:"login-submit", disabled:!checked||loading, onClick:concordar}, loading ? e("span",{className:"login-spinner"}) : null, "CONCORDAR E CONTINUAR")
+      )
+    )
+  );
+}
+
+/* ============================== FERRAMENTARIA — páginas ============================== */
+function MetaPill(props){
+  var meta = props.meta;
+  return e("span", {className:"pill", style:{background:meta.soft, color:meta.color}}, e("span",{className:"pill-dot"}), meta.label);
+}
+function nomeUsuarioFerr(id){ var u = findUser(id); return u ? u.nome : "—"; }
+
+/* Campo de obra reutilizado nos formulários de retirada/reserva: escolhe uma obra já cadastrada
+   ou digita uma nova na hora (grava em ferramentaria_obras assim que o formulário é enviado). */
+function ObraPickerField(props){
+  var app = useApp();
+  var novaState = useState(false); var nova = novaState[0], setNova = novaState[1];
+  var novoNomeState = useState(""); var novoNome = novoNomeState[0], setNovoNome = novoNomeState[1];
+  if (nova){
+    return e("div", {className:"field"}, e("label",null,"Obra"),
+      e("div", {style:{display:"flex", gap:6}},
+        e("input", {type:"text", value:novoNome, autoFocus:true, placeholder:"Nome da nova obra",
+          onChange:function(ev){ setNovoNome(ev.target.value); props.onChangeNovaObra(ev.target.value); }}),
+        e("button", {type:"button", className:"btn secondary sm", onClick:function(){ setNova(false); setNovoNome(""); props.onChangeNovaObra(""); }}, "Cancelar")
+      )
+    );
+  }
+  return e("div", {className:"field"}, e("label",null,"Obra"),
+    e("select", {value:props.value||"", onChange:function(ev){
+        if (ev.target.value === "__nova__"){ setNova(true); return; }
+        props.onChange(ev.target.value);
+      }},
+      e("option", {value:""}, "Sem obra definida"),
+      app.obras.map(function(o){ return e("option",{key:o.id, value:o.id}, o.nome); }),
+      e("option", {value:"__nova__"}, "+ Nova obra...")
+    )
+  );
+}
+
+/* ---- Catálogo (cadastro) de ferramentas ---- */
+function FerramentaFormModal(props){
+  var app = useApp();
+  var editing = !!props.ferramenta;
+  var f = props.ferramenta;
+  var st = useState(editing
+    ? {nome:f.nome, categoria:f.categoria, marca:f.marca||"", modelo:f.modelo||"", numeroPatrimonio:f.numeroPatrimonio||"",
+       valorAquisicao:f.valorAquisicao||"", dataAquisicao:f.dataAquisicao||"", precisaCalibragem:!!f.precisaCalibragem, observacoes:f.observacoes||""}
+    : {nome:"", categoria:FERRAMENTA_CATEGORIAS[0], marca:"", modelo:"", numeroPatrimonio:"", valorAquisicao:"", dataAquisicao:"", precisaCalibragem:false, observacoes:""});
+  var form = st[0], setForm = st[1];
+  var errorState = useState(""); var error = errorState[0], setError = errorState[1];
+  function set(k,v){ var next=Object.assign({},form); next[k]=v; setForm(next); }
+  function submit(){
+    if (!form.nome.trim()){ setError("Informe o nome da ferramenta."); return; }
+    var payload = Object.assign({}, form, {valorAquisicao: form.valorAquisicao ? Number(form.valorAquisicao) : null, dataAquisicao: form.dataAquisicao || null});
+    var res = editing ? app.updateFerramenta(f.id, payload) : app.addFerramenta(payload);
+    Promise.resolve(res).then(function(r){ if (r && r.ok===false){ setError(r.error||"Não foi possível salvar."); return; } props.onClose(); });
+  }
+  return e(Modal, {title: editing ? "Editar ferramenta" : "Nova ferramenta", onClose:props.onClose,
+    footer: e(React.Fragment, null,
+      e("button", {className:"btn secondary", onClick:props.onClose}, "Cancelar"),
+      e("button", {className:"btn", onClick:submit}, e(Icon,{name:editing?"check":"plus",size:14}), editing ? "Salvar alterações" : "Cadastrar")
+    )},
+    error ? e("div", {className:"confirm-box", style:{background:"var(--red-soft)", borderColor:"var(--red)"}}, error) : null,
+    e("div", {className:"field"}, e("label",null,"Nome"),
+      e("input", {type:"text", value:form.nome, placeholder:"Ex.: Furadeira de Impacto Bosch GSB 550", onChange:function(ev){set("nome",ev.target.value);}})),
+    e("div", {className:"field-row"},
+      e("div", {className:"field"}, e("label",null,"Categoria"),
+        e("select", {value:form.categoria, onChange:function(ev){set("categoria",ev.target.value);}},
+          FERRAMENTA_CATEGORIAS.map(function(c){ return e("option",{key:c,value:c}, c); }))),
+      e("div", {className:"field"}, e("label",null,"Nº patrimônio"),
+        e("input", {type:"text", value:form.numeroPatrimonio, onChange:function(ev){set("numeroPatrimonio",ev.target.value);}}))
+    ),
+    e("div", {className:"field-row"},
+      e("div", {className:"field"}, e("label",null,"Marca"),
+        e("input", {type:"text", value:form.marca, onChange:function(ev){set("marca",ev.target.value);}})),
+      e("div", {className:"field"}, e("label",null,"Modelo"),
+        e("input", {type:"text", value:form.modelo, onChange:function(ev){set("modelo",ev.target.value);}}))
+    ),
+    e("div", {className:"field-row"},
+      e("div", {className:"field"}, e("label",null,"Valor de aquisição (R$)"),
+        e("input", {type:"number", value:form.valorAquisicao, onChange:function(ev){set("valorAquisicao",ev.target.value);}})),
+      e("div", {className:"field"}, e("label",null,"Data de aquisição"),
+        e("input", {type:"date", value:form.dataAquisicao, onChange:function(ev){set("dataAquisicao",ev.target.value);}}))
+    ),
+    e("label", {className:"login-check-row", style:{color:"var(--text-2)"}},
+      e("input", {type:"checkbox", checked:form.precisaCalibragem, onChange:function(ev){set("precisaCalibragem",ev.target.checked);}}),
+      "Precisa de calibragem periódica"),
+    e("div", {className:"field"}, e("label",null,"Observações"),
+      e("textarea", {value:form.observacoes, onChange:function(ev){set("observacoes",ev.target.value);}}))
+  );
+}
+
+function PageFerramentas(){
+  var app = useApp();
+  var modalState = useState(null); var modal = modalState[0], setModal = modalState[1];
+  var searchState = useState(""); var search = searchState[0], setSearch = searchState[1];
+  var podeGerenciar = canGerenciarCatalogoFerramentas();
+  var rows = app.ferramentas.filter(function(f){
+    var q = search.trim().toLowerCase();
+    if (!q) return true;
+    return f.nome.toLowerCase().indexOf(q)!==-1 || (f.marca||"").toLowerCase().indexOf(q)!==-1 || (f.numeroPatrimonio||"").toLowerCase().indexOf(q)!==-1;
+  });
+  function excluir(f){
+    if (!window.confirm("Excluir \"" + f.nome + "\" do catálogo? Esta ação não pode ser desfeita.")) return;
+    app.excluirFerramenta(f.id);
+  }
+  return e("div", {className:"content-narrow"},
+    e(PageHead, {title:"Ferramentas", subtitle:"Catálogo de ferramentas da " + FERRAMENTARIA_LOCAL_LABEL + ".",
+      actions: podeGerenciar ? [e("button",{key:"nf", className:"btn", onClick:function(){ setModal({mode:"create"}); }}, e(Icon,{name:"plus",size:14}), "Nova ferramenta")] : []}),
+    !podeGerenciar ? e("div", {className:"readonly-banner"}, e(Icon,{name:"lock",size:14}), "Somente o almoxarife administrador pode cadastrar, editar ou excluir ferramentas do catálogo.") : null,
+    e("div", {className:"field", style:{maxWidth:320, marginBottom:14}},
+      e("input", {type:"text", placeholder:"Buscar por nome, marca ou patrimônio...", value:search, onChange:function(ev){setSearch(ev.target.value);}})),
+    rows.length ? e("div", {className:"simple-table-wrap"},
+      e("table", {className:"demandas"},
+        e("thead", null, e("tr", null,
+          e("th",null,"Ferramenta"), e("th",null,"Categoria"), e("th",null,"Patrimônio"), e("th",null,"Status"), e("th",null,"Calibragem"), podeGerenciar ? e("th",null,"Ações") : null
+        )),
+        e("tbody", null, rows.map(function(f){
+          return e("tr", {key:f.id},
+            e("td", null, e("b",null,f.nome), f.marca||f.modelo ? e("div",{style:{color:"var(--text-3)", fontSize:11.5}}, [f.marca,f.modelo].filter(Boolean).join(" · ")) : null),
+            e("td", null, f.categoria),
+            e("td", null, f.numeroPatrimonio || "—"),
+            e("td", null, e(MetaPill, {meta: FERRAMENTA_STATUS_META[f.status] || FERRAMENTA_STATUS_META.DISPONIVEL})),
+            e("td", null, f.precisaCalibragem ? e("span",{className:"pill", style:{background:"var(--bronze-soft)", color:"var(--bronze)"}}, "Necessária") : "—"),
+            podeGerenciar ? e("td", null, e("div",{style:{display:"flex", gap:6}},
+              e("button", {className:"iconbtn", title:"Editar", onClick:function(){ setModal({mode:"edit", ferramenta:f}); }}, e(Icon,{name:"edit",size:14})),
+              e("button", {className:"iconbtn", title:"Excluir", onClick:function(){ excluir(f); }}, e(Icon,{name:"trash",size:14}))
+            )) : null
+          );
+        }))
+      )
+    ) : e(EmptyState, {icon:"wrench", text: search ? "Nenhuma ferramenta encontrada para essa busca." : "Nenhuma ferramenta cadastrada ainda."}),
+    modal && (modal.mode==="create"||modal.mode==="edit") ? e(FerramentaFormModal, {ferramenta:modal.ferramenta, onClose:function(){ setModal(null); }}) : null
+  );
+}
+
+/* ---- Retiradas & Reservas ---- */
+function RetirarFerramentaModal(props){
+  var app = useApp();
+  var disponiveis = app.ferramentas.filter(function(f){ return f.status==="DISPONIVEL"; });
+  var admin = isAlmoxAdmin();
+  var st = useState({ferramentaId: props.ferramentaId || (disponiveis[0] ? disponiveis[0].id : ""), usuarioId: CURRENT_USER_ID, obraId:"", previsaoDevolucao:"", observacoes:""});
+  var form = st[0], setForm = st[1];
+  var novaObraNomeState = useState(""); var novaObraNome = novaObraNomeState[0], setNovaObraNome = novaObraNomeState[1];
+  var errorState = useState(""); var error = errorState[0], setError = errorState[1];
+  var savingState = useState(false); var saving = savingState[0], setSaving = savingState[1];
+  function set(k,v){ var next=Object.assign({},form); next[k]=v; setForm(next); }
+  function submit(){
+    if (!form.ferramentaId){ setError("Selecione a ferramenta."); return; }
+    setSaving(true); setError("");
+    Promise.resolve(novaObraNome ? app.addObraFerramentaria(novaObraNome) : null).then(function(obraNova){
+      var payload = Object.assign({}, form, {obraId: obraNova ? obraNova.id : (form.obraId||null)});
+      return app.retirarFerramenta(payload);
+    }).then(function(res){
+      setSaving(false);
+      if (!res || res.ok===false){ setError((res&&res.error)||"Não foi possível registrar a retirada."); return; }
+      props.onClose();
+    });
+  }
+  return e(Modal, {title:"Nova retirada", onClose:props.onClose,
+    footer: e(React.Fragment, null,
+      e("button", {className:"btn secondary", onClick:props.onClose}, "Cancelar"),
+      e("button", {className:"btn", disabled:saving, onClick:submit}, e(Icon,{name:"box",size:14}), "Registrar retirada")
+    )},
+    error ? e("div", {className:"confirm-box", style:{background:"var(--red-soft)", borderColor:"var(--red)"}}, error) : null,
+    e("div", {className:"field"}, e("label",null,"Ferramenta"),
+      e("select", {value:form.ferramentaId, onChange:function(ev){set("ferramentaId",ev.target.value);}},
+        disponiveis.length ? null : e("option",{value:""}, "Nenhuma ferramenta disponível"),
+        disponiveis.map(function(f){ return e("option",{key:f.id, value:f.id}, f.nome + (f.numeroPatrimonio?" ("+f.numeroPatrimonio+")":"")); }))),
+    admin ? e("div", {className:"field"}, e("label",null,"Quem está retirando"),
+      e("select", {value:form.usuarioId, onChange:function(ev){set("usuarioId",ev.target.value);}},
+        USERS.filter(function(u){ return u.acessoFerramentaria; }).map(function(u){ return e("option",{key:u.id,value:u.id}, u.nome); }))) : null,
+    e(ObraPickerField, {value:form.obraId, onChange:function(v){set("obraId",v);}, onChangeNovaObra:setNovaObraNome}),
+    e("div", {className:"field"}, e("label",null,"Previsão de devolução"),
+      e("input", {type:"date", value:form.previsaoDevolucao, onChange:function(ev){set("previsaoDevolucao",ev.target.value);}})),
+    e("div", {className:"field"}, e("label",null,"Observações"),
+      e("textarea", {value:form.observacoes, onChange:function(ev){set("observacoes",ev.target.value);}}))
+  );
+}
+function ReservarFerramentaModal(props){
+  var app = useApp();
+  var admin = isAlmoxAdmin();
+  var st = useState({ferramentaId: app.ferramentas[0] ? app.ferramentas[0].id : "", usuarioId: CURRENT_USER_ID, obraId:"", dataInicio:"", dataFim:""});
+  var form = st[0], setForm = st[1];
+  var novaObraNomeState = useState(""); var novaObraNome = novaObraNomeState[0], setNovaObraNome = novaObraNomeState[1];
+  var errorState = useState(""); var error = errorState[0], setError = errorState[1];
+  var savingState = useState(false); var saving = savingState[0], setSaving = savingState[1];
+  function set(k,v){ var next=Object.assign({},form); next[k]=v; setForm(next); }
+  function submit(){
+    if (!form.ferramentaId || !form.dataInicio || !form.dataFim){ setError("Preencha ferramenta e o período da reserva."); return; }
+    setSaving(true); setError("");
+    Promise.resolve(novaObraNome ? app.addObraFerramentaria(novaObraNome) : null).then(function(obraNova){
+      var payload = Object.assign({}, form, {obraId: obraNova ? obraNova.id : (form.obraId||null)});
+      return app.reservarFerramenta(payload);
+    }).then(function(res){
+      setSaving(false);
+      if (!res || res.ok===false){ setError((res&&res.error)||"Não foi possível criar a reserva."); return; }
+      if (res.motivo) window.alert("Reserva registrada como pendente de autorização (" + (res.motivo==="duracao" ? "mais de "+RESERVA_DURACAO_MAX_DIAS+" dias" : "já existe outra reserva/retirada sua para esta ferramenta") + "). O almoxarife precisa aprovar.");
+      props.onClose();
+    });
+  }
+  return e(Modal, {title:"Nova reserva", onClose:props.onClose,
+    footer: e(React.Fragment, null,
+      e("button", {className:"btn secondary", onClick:props.onClose}, "Cancelar"),
+      e("button", {className:"btn", disabled:saving, onClick:submit}, e(Icon,{name:"calendar",size:14}), "Reservar")
+    )},
+    error ? e("div", {className:"confirm-box", style:{background:"var(--red-soft)", borderColor:"var(--red)"}}, error) : null,
+    e("div", {className:"field"}, e("label",null,"Ferramenta"),
+      e("select", {value:form.ferramentaId, onChange:function(ev){set("ferramentaId",ev.target.value);}},
+        app.ferramentas.map(function(f){ return e("option",{key:f.id, value:f.id}, f.nome); }))),
+    admin ? e("div", {className:"field"}, e("label",null,"Para quem"),
+      e("select", {value:form.usuarioId, onChange:function(ev){set("usuarioId",ev.target.value);}},
+        USERS.filter(function(u){ return u.acessoFerramentaria; }).map(function(u){ return e("option",{key:u.id,value:u.id}, u.nome); }))) : null,
+    e(ObraPickerField, {value:form.obraId, onChange:function(v){set("obraId",v);}, onChangeNovaObra:setNovaObraNome}),
+    e("div", {className:"field-row"},
+      e("div", {className:"field"}, e("label",null,"Início"),
+        e("input", {type:"date", value:form.dataInicio, onChange:function(ev){set("dataInicio",ev.target.value);}})),
+      e("div", {className:"field"}, e("label",null,"Fim"),
+        e("input", {type:"date", value:form.dataFim, onChange:function(ev){set("dataFim",ev.target.value);}}))
+    ),
+    e("p", {className:"hint"}, "Reservas com mais de " + RESERVA_DURACAO_MAX_DIAS + " dias, ou repetidas para a mesma ferramenta, ficam pendentes até o almoxarife autorizar.")
+  );
+}
+function DevolverFerramentaModal(props){
+  var app = useApp();
+  var r = props.retirada;
+  var ferramenta = app.ferramentasById[r.ferramentaId];
+  var st = useState({estadoDevolucao:"OK", observacoes:""}); var form = st[0], setForm = st[1];
+  function set(k,v){ var next=Object.assign({},form); next[k]=v; setForm(next); }
+  function submit(){ Promise.resolve(app.devolverFerramenta(r.id, form)).then(function(){ props.onClose(); }); }
+  return e(Modal, {title:"Devolver ferramenta", onClose:props.onClose,
+    footer: e(React.Fragment, null,
+      e("button", {className:"btn secondary", onClick:props.onClose}, "Cancelar"),
+      e("button", {className:"btn", onClick:submit}, e(Icon,{name:"check",size:14}), "Confirmar devolução")
+    )},
+    e("p", {style:{color:"var(--text-2)"}}, "Ferramenta: ", e("b",null, ferramenta ? ferramenta.nome : "—"), " · Retirada por ", nomeUsuarioFerr(r.usuarioId)),
+    e("div", {className:"field"}, e("label",null,"Estado da devolução"),
+      e("select", {value:form.estadoDevolucao, onChange:function(ev){set("estadoDevolucao",ev.target.value);}},
+        Object.keys(RETIRADA_ESTADO_META).map(function(k){ return e("option",{key:k,value:k}, RETIRADA_ESTADO_META[k].label); }))),
+    e("div", {className:"field"}, e("label",null,"Observações"),
+      e("textarea", {value:form.observacoes, onChange:function(ev){set("observacoes",ev.target.value);}}))
+  );
+}
+
+function PageRetiradasReservas(){
+  var app = useApp();
+  var modalState = useState(null); var modal = modalState[0], setModal = modalState[1];
+  var ativas = app.retiradas.filter(function(r){ return !r.devolvidoEm; }).sort(function(a,b){ return (a.previsaoDevolucao||"9999").localeCompare(b.previsaoDevolucao||"9999"); });
+  var historico = app.retiradas.filter(function(r){ return !!r.devolvidoEm; }).slice(0,20);
+  var reservasAtivas = app.reservas.filter(function(r){ return r.status!=="CANCELADA" && r.status!=="CONVERTIDA"; }).sort(function(a,b){ return a.dataInicio.localeCompare(b.dataInicio); });
+  return e("div", {className:"content-narrow"},
+    e(PageHead, {title:"Retiradas & Reservas", subtitle:"Quem retirou, quem reservou e o que está em aberto.",
+      actions:[
+        e("button",{key:"rr", className:"btn secondary", onClick:function(){ setModal({mode:"reservar"}); }}, e(Icon,{name:"calendar",size:14}), "Nova reserva"),
+        e("button",{key:"rt", className:"btn", onClick:function(){ setModal({mode:"retirar"}); }}, e(Icon,{name:"box",size:14}), "Nova retirada")
+      ]}),
+    e("div", {className:"panel-card", style:{marginBottom:18}},
+      e("div", {className:"pc-head"}, e("h3",null,"Retiradas em aberto")),
+      ativas.length ? e("div", {className:"simple-table-wrap"},
+        e("table", {className:"demandas"},
+          e("thead", null, e("tr", null, e("th",null,"Ferramenta"), e("th",null,"Com quem"), e("th",null,"Obra"), e("th",null,"Previsão devolução"), e("th",null,"Ações"))),
+          e("tbody", null, ativas.map(function(r){
+            var ferramenta = app.ferramentasById[r.ferramentaId];
+            var obra = r.obraId ? app.obrasFerramentariaById[r.obraId] : null;
+            var atrasada = isRetiradaAtrasada(r);
+            var podeDevolver = isAlmoxAdmin() || r.usuarioId === CURRENT_USER_ID;
+            return e("tr", {key:r.id},
+              e("td", null, ferramenta ? ferramenta.nome : "—"),
+              e("td", null, nomeUsuarioFerr(r.usuarioId)),
+              e("td", null, obra ? obra.nome : "—"),
+              e("td", null, r.previsaoDevolucao ? fmtDateBR(r.previsaoDevolucao) : "—", atrasada ? e("span",{className:"pill", style:{background:"var(--red-soft)", color:"var(--red)", marginLeft:6}}, "Atrasada") : null),
+              e("td", null, podeDevolver ? e("button", {className:"btn secondary sm", onClick:function(){ setModal({mode:"devolver", retirada:r}); }}, "Devolver") : "—")
+            );
+          }))
+        )
+      ) : e(EmptyState, {icon:"box", text:"Nenhuma ferramenta em posse de alguém no momento."})
+    ),
+    e("div", {className:"panel-card", style:{marginBottom:18}},
+      e("div", {className:"pc-head"}, e("h3",null,"Reservas")),
+      reservasAtivas.length ? e("div", {className:"simple-table-wrap"},
+        e("table", {className:"demandas"},
+          e("thead", null, e("tr", null, e("th",null,"Ferramenta"), e("th",null,"Para quem"), e("th",null,"Período"), e("th",null,"Status"), e("th",null,"Ações"))),
+          e("tbody", null, reservasAtivas.map(function(r){
+            var ferramenta = app.ferramentasById[r.ferramentaId];
+            return e("tr", {key:r.id},
+              e("td", null, ferramenta ? ferramenta.nome : "—"),
+              e("td", null, nomeUsuarioFerr(r.usuarioId)),
+              e("td", null, fmtDateBR(r.dataInicio) + " – " + fmtDateBR(r.dataFim)),
+              e("td", null, e(MetaPill, {meta: RESERVA_STATUS_META[r.status]})),
+              e("td", null, e("div",{style:{display:"flex", gap:6}},
+                (r.status==="PENDENTE_AUTORIZACAO" && isAlmoxAdmin()) ? e(React.Fragment, null,
+                  e("button", {className:"btn secondary sm", onClick:function(){ app.decidirAutorizacaoReserva(r.id,true); }}, "Autorizar"),
+                  e("button", {className:"btn secondary sm", onClick:function(){ app.decidirAutorizacaoReserva(r.id,false); }}, "Negar")
+                ) : null,
+                canCancelarReserva(r) && r.status!=="NEGADA" ? e("button", {className:"iconbtn", title:"Cancelar reserva", onClick:function(){ if (window.confirm("Cancelar esta reserva?")) app.cancelarReserva(r.id); }}, e(Icon,{name:"x",size:14})) : null
+              ))
+            );
+          }))
+        )
+      ) : e(EmptyState, {icon:"calendar", text:"Nenhuma reserva futura no momento."})
+    ),
+    historico.length ? e("div", {className:"panel-card"},
+      e("div", {className:"pc-head"}, e("h3",null,"Histórico recente de devoluções")),
+      e("div", {className:"simple-table-wrap"},
+        e("table", {className:"demandas"},
+          e("thead", null, e("tr", null, e("th",null,"Ferramenta"), e("th",null,"Com quem"), e("th",null,"Devolvida em"), e("th",null,"Estado"))),
+          e("tbody", null, historico.map(function(r){
+            var ferramenta = app.ferramentasById[r.ferramentaId];
+            return e("tr", {key:r.id},
+              e("td", null, ferramenta ? ferramenta.nome : "—"),
+              e("td", null, nomeUsuarioFerr(r.usuarioId)),
+              e("td", null, fmtDateBR(r.devolvidoEm)),
+              e("td", null, e(MetaPill, {meta: RETIRADA_ESTADO_META[r.estadoDevolucao] || RETIRADA_ESTADO_META.OK}))
+            );
+          }))
+        )
+      )
+    ) : null,
+    modal && modal.mode==="retirar" ? e(RetirarFerramentaModal, {onClose:function(){ setModal(null); }}) : null,
+    modal && modal.mode==="reservar" ? e(ReservarFerramentaModal, {onClose:function(){ setModal(null); }}) : null,
+    modal && modal.mode==="devolver" ? e(DevolverFerramentaModal, {retirada:modal.retirada, onClose:function(){ setModal(null); }}) : null
+  );
+}
+
+function PageFerramentariaDashboard(){
+  var app = useApp();
+  var stats = app.ferramentariaStats;
+  var atrasadas = app.retiradas.filter(isRetiradaAtrasada);
+  var pendentes = isAlmoxAdmin() ? app.reservas.filter(function(r){ return r.status==="PENDENTE_AUTORIZACAO"; }) : [];
+  return e("div", {className:"content-narrow"},
+    e(PageHead, {title:"Ferramentaria", subtitle: FERRAMENTARIA_LOCAL_LABEL + " · painel geral do estoque de ferramentas."}),
+    e("div", {className:"stat-grid"},
+      e(StatTile, {label:"Ferramentas cadastradas", value:stats.total, icon:"wrench", color:"var(--accent)", soft:"var(--accent-soft)"}),
+      e(StatTile, {label:"Disponíveis", value:stats.disponiveis, icon:"checkcircle", color:"var(--green)", soft:"var(--green-soft)"}),
+      e(StatTile, {label:"Em uso", value:stats.emUso, icon:"box", color:"var(--blue)", soft:"var(--blue-soft)"}),
+      e(StatTile, {label:"Em manutenção", value:stats.emManutencao, icon:"settings", color:"var(--orange)", soft:"var(--orange-soft)"}),
+      e(StatTile, {label:"Retiradas atrasadas", value:stats.atrasadas, icon:"alert", color:"var(--red)", soft:"var(--red-soft)", valueColor:"var(--red)"}),
+      isAlmoxAdmin() ? e(StatTile, {label:"Reservas aguardando autorização", value:stats.pendentesAutorizacao, icon:"clock", color:"var(--bronze)", soft:"var(--bronze-soft)"}) : null
+    ),
+    e("div", {className:"two-col"},
+      e("div", {className:"panel-card"},
+        e("div", {className:"pc-head"}, e("h3",null,"Retiradas atrasadas"), e("button",{className:"btn ghost sm", onClick:function(){app.navigate("ferr_retiradas");}}, "Ver todas")),
+        atrasadas.length ? e("div", {style:{padding:"4px 16px 14px", display:"flex", flexDirection:"column", gap:8}},
+          atrasadas.slice(0,6).map(function(r){
+            var ferramenta = app.ferramentasById[r.ferramentaId];
+            return e("div", {key:r.id, style:{display:"flex", justifyContent:"space-between", fontSize:13}},
+              e("span", null, e("b",null, ferramenta?ferramenta.nome:"—"), " — " + nomeUsuarioFerr(r.usuarioId)),
+              e("span", {style:{color:"var(--red)"}}, fmtDateBR(r.previsaoDevolucao))
+            );
+          })
+        ) : e(EmptyState, {icon:"checkcircle", text:"Nenhuma retirada atrasada. Bom trabalho!"})
+      ),
+      e("div", {className:"panel-card"},
+        e("div", {className:"pc-head"}, e("h3",null, isAlmoxAdmin() ? "Reservas aguardando autorização" : "Próximas reservas")),
+        (isAlmoxAdmin() ? pendentes : app.reservas.filter(function(r){return r.status==="AGENDADA";})).slice(0,6).length
+          ? e("div", {style:{padding:"4px 16px 14px", display:"flex", flexDirection:"column", gap:8}},
+            (isAlmoxAdmin() ? pendentes : app.reservas.filter(function(r){return r.status==="AGENDADA";})).slice(0,6).map(function(r){
+              var ferramenta = app.ferramentasById[r.ferramentaId];
+              return e("div", {key:r.id, style:{display:"flex", justifyContent:"space-between", fontSize:13}},
+                e("span", null, e("b",null, ferramenta?ferramenta.nome:"—"), " — " + nomeUsuarioFerr(r.usuarioId)),
+                e("span", {style:{color:"var(--text-3)"}}, fmtDateBR(r.dataInicio))
+              );
+            })
+          ) : e(EmptyState, {icon:"calendar", text:"Nada por aqui no momento."})
+      )
+    )
+  );
+}
+
+function PageFerramentariaEmConstrucao(props){
+  return e("div", {className:"content-narrow"},
+    e(PageHead, {title:props.titulo, subtitle:"Ferramentaria"}),
+    e(EmptyState, {icon:"settings", text:"Esta página está em construção e chega em uma próxima atualização."})
   );
 }
 
@@ -3225,6 +3931,18 @@ function App(){
   var mobileNavState = useState(false); var mobileNavOpen = mobileNavState[0], setMobileNavOpen = mobileNavState[1];
   var themeState = useState(loadTheme); var theme = themeState[0], setThemeState = themeState[1];
 
+  /* ---- FERRAMENTARIA — mesmo padrão de projects/demandas acima, "gavetas" próprias.
+     workspace começa null; só é definido depois que os dados da sessão carregam (ver
+     refreshWorkspaceData/login abaixo), quando dá pra decidir via resolveInitialWorkspace(). */
+  var workspaceState = useState(null); var workspace = workspaceState[0], setWorkspace = workspaceState[1];
+  var obrasState = useState([]); var obras = obrasState[0], setObras = obrasState[1];
+  var ferramentasState = useState([]); var ferramentas = ferramentasState[0], setFerramentas = ferramentasState[1];
+  var reservasState = useState([]); var reservas = reservasState[0], setReservas = reservasState[1];
+  var retiradasState = useState([]); var retiradas = retiradasState[0], setRetiradas = retiradasState[1];
+  var manutencoesState = useState([]); var manutencoes = manutencoesState[0], setManutencoes = manutencoesState[1];
+  var equipamentosState = useState([]); var equipamentos = equipamentosState[0], setEquipamentos = equipamentosState[1];
+  var equipManutState = useState([]); var equipamentoManutencoes = equipManutState[0], setEquipamentoManutencoes = equipManutState[1];
+
   /* ---- SESSÃO / LOGIN (Etapa 05 — Supabase Auth de verdade) ----
      sessionUserId continua sendo o único "state" React da autenticação (mesmo padrão de
      "global mutável + rerender pela raiz" já usado neste arquivo para CURRENT_USER_ID), só que
@@ -3256,11 +3974,22 @@ function App(){
 
   /* Recarrega perfis/projetos/demandas do Supabase e aplica no state do React. Usada tanto
      no carregamento inicial (se já havia uma sessão salva) quanto logo após um login novo. */
+  /* Carrega Gestão de Demandas + Ferramentaria em paralelo. A Ferramentaria é protegida só pela
+     RLS (tem_acesso_ferramentaria()) — quem não tem acesso recebe listas vazias, sem erro — então
+     é seguro buscar sempre, mesmo para quem só usa o Workspace. */
   function refreshWorkspaceData(){
-    return fetchWorkspaceSnapshot().then(function(snap){
+    return Promise.all([fetchWorkspaceSnapshot(), fetchFerramentariaSnapshot()]).then(function(results){
+      var snap = results[0], ferrSnap = results[1];
       USERS = snap.profiles;
       setProjects(snap.projects);
       setDemandas(snap.demandas);
+      setObras(ferrSnap.obras);
+      setFerramentas(ferrSnap.ferramentas);
+      setReservas(ferrSnap.reservas);
+      setRetiradas(ferrSnap.retiradas);
+      setManutencoes(ferrSnap.manutencoes);
+      setEquipamentos(ferrSnap.equipamentos);
+      setEquipamentoManutencoes(ferrSnap.equipamentoManutencoes);
       setDataError("");
       bumpUsers();
     });
@@ -3273,7 +4002,12 @@ function App(){
       var session = res.data && res.data.session;
       if (!session || !session.user){ if (mounted) setAuthReady(true); return; }
       refreshWorkspaceData().then(function(){
-        if (mounted){ setSessionUserId(session.user.id); setAuthReady(true); }
+        if (mounted){
+          var u = findUser(session.user.id);
+          setWorkspace(resolveInitialWorkspace(u));
+          setSessionUserId(session.user.id);
+          setAuthReady(true);
+        }
       }, function(){
         if (mounted){ setDataError("Não foi possível carregar os dados do servidor. Verifique sua conexão e recarregue a página."); setAuthReady(true); }
       });
@@ -3295,7 +4029,9 @@ function App(){
         var u = findUser(res.data.user.id);
         if (!u) { sb.auth.signOut(); return {ok:false, error:"Seu usuário ainda não tem um perfil configurado no sistema. Contate o administrador."}; }
         if (u.status !== "ativo"){ sb.auth.signOut(); return {ok:false, error:"Este usuário está inativo. Contate o administrador do sistema."}; }
+        if (!u.acessoWorkspace && !u.acessoFerramentaria){ sb.auth.signOut(); return {ok:false, error:"Este usuário não tem acesso a nenhum workspace. Contate o administrador do sistema."}; }
         setSessionUserId(u.id);
+        setWorkspace(resolveInitialWorkspace(u));
         return {ok:true};
       }, function(){
         return {ok:false, error:"Login feito, mas não foi possível carregar os dados do servidor. Tente novamente."};
@@ -3310,6 +4046,35 @@ function App(){
     setRoute({page:"inicio"});
     setDetailId(null);
     setModal(null);
+    setWorkspace(null);
+  }
+  /* Só faz sentido para quem tem acesso aos dois workspaces — o item de menu que chama isso já
+     fica oculto para os demais; o guard aqui evita um estado inválido se for chamado por outro
+     caminho no futuro. */
+  function switchWorkspace(){
+    var u = findUser(CURRENT_USER_ID);
+    if (!u || !u.acessoWorkspace || !u.acessoFerramentaria) return;
+    setWorkspace(null);
+    setRoute({page:"inicio"});
+    setDetailId(null);
+    setModal(null);
+  }
+  function selectWorkspace(name){
+    setWorkspace(name);
+    setRoute({page: name==="ferramentaria" ? "ferr_dashboard" : "inicio"});
+  }
+  /* Termo de uso da Ferramentaria: aceite do próprio usuário (mesmo padrão de updateProprioPerfil
+     — a política de RLS "profiles_update_self" já libera essas duas colunas para autoedição). */
+  function aceitarTermosFerramentaria(){
+    var u = findUser(CURRENT_USER_ID);
+    if (!u) return Promise.resolve({ok:false, error:"Sessão inválida."});
+    var agora = new Date().toISOString();
+    return window.__FOHAT_SB__.from("profiles").update({termos_ferramentaria_aceitos:true, termos_ferramentaria_aceitos_em: agora}).eq("id", u.id).select().then(function(res){
+      if (res.error || !res.data || !res.data.length) return {ok:false, error:"Não foi possível registrar o aceite. Tente novamente."};
+      return refreshWorkspaceData().then(function(){ return {ok:true}; }, function(){ return {ok:true}; });
+    }, function(){
+      return {ok:false, error:"Não foi possível conectar ao servidor."};
+    });
   }
 
   /* ---- ETAPA 07 — as quatro funções abaixo agora gravam de verdade, via a Edge Function
@@ -3322,9 +4087,12 @@ function App(){
   function addUsuario(form){
     if (!can("gerenciar_usuarios")) return Promise.resolve({ok:false, error:"Sem permissão."});
     if (findUserByEmail(form.email)) return Promise.resolve({ok:false, error:"Já existe um usuário com este e-mail."});
+    if (!form.acessoWorkspace && !form.acessoFerramentaria) return Promise.resolve({ok:false, error:"Marque ao menos um acesso: Workspace e/ou Ferramentaria."});
     return callAdminUsers("create", {
       nome: form.nome, email: form.email, cargo: form.cargo, telefone: form.telefone,
-      senha: form.senha, perfil: form.perfil, status: form.status
+      senha: form.senha, perfil: form.perfil, status: form.status,
+      acessoWorkspace: !!form.acessoWorkspace, acessoFerramentaria: !!form.acessoFerramentaria,
+      ferramentariaPerfil: form.acessoFerramentaria ? (form.ferramentariaPerfil || "COLABORADOR") : null
     }).then(function(res){
       if (!res.ok) return res;
       refreshWorkspaceData();
@@ -3335,6 +4103,13 @@ function App(){
     if (!can("gerenciar_usuarios")) return Promise.resolve({ok:false, error:"Sem permissão."});
     if (patch.email && findUserByEmail(patch.email) && findUserByEmail(patch.email).id !== id) {
       return Promise.resolve({ok:false, error:"Já existe um usuário com este e-mail."});
+    }
+    if (typeof patch.acessoWorkspace !== "undefined" || typeof patch.acessoFerramentaria !== "undefined"){
+      var alvo = findUser(id);
+      var aw = typeof patch.acessoWorkspace !== "undefined" ? !!patch.acessoWorkspace : (alvo && alvo.acessoWorkspace);
+      var af = typeof patch.acessoFerramentaria !== "undefined" ? !!patch.acessoFerramentaria : (alvo && alvo.acessoFerramentaria);
+      if (!aw && !af) return Promise.resolve({ok:false, error:"Marque ao menos um acesso: Workspace e/ou Ferramentaria."});
+      patch = Object.assign({}, patch, {acessoWorkspace: aw, acessoFerramentaria: af, ferramentariaPerfil: af ? (patch.ferramentariaPerfil || (alvo && alvo.ferramentariaPerfil) || "COLABORADOR") : null});
     }
     return callAdminUsers("update", {id: id, patch: patch}).then(function(res){
       if (!res.ok) return res;
@@ -3379,6 +4154,157 @@ function App(){
     return callAdminUsers("delete", {id: id}).then(function(res){
       if (!res.ok) return res;
       refreshWorkspaceData();
+      return {ok:true};
+    });
+  }
+
+  /* ============================== FERRAMENTARIA — ações ==============================
+     Mesmo padrão já usado para projetos/demandas acima: atualiza a tela na hora (otimista) e
+     grava no Supabase em paralelo; se a gravação falhar, reportSyncError avisa no topo. */
+  function addObraFerramentaria(nome){
+    nome = (nome||"").trim();
+    if (!hasFerramentariaAccess()) return Promise.resolve(null);
+    if (!nome) return Promise.resolve(null);
+    var existente = obras.filter(function(o){ return o.nome.toLowerCase()===nome.toLowerCase(); })[0];
+    if (existente) return Promise.resolve(existente);
+    var novaId = newDbId();
+    var nova = {id: novaId, nome: nome};
+    setObras(function(prev){ return prev.concat([nova]); });
+    return window.__FOHAT_SB__.from("ferramentaria_obras").insert({id: novaId, nome: nome}).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("A obra apareceu na tela, mas não foi salva no servidor."); return nova; }
+      return nova;
+    });
+  }
+
+  function addFerramenta(form){
+    if (!canGerenciarCatalogoFerramentas()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    var novoId = newDbId();
+    var novo = {
+      id: novoId, nome: form.nome, categoria: form.categoria, marca: form.marca||"", modelo: form.modelo||"",
+      numeroPatrimonio: form.numeroPatrimonio||"", valorAquisicao: form.valorAquisicao||null, dataAquisicao: form.dataAquisicao||null,
+      status: "DISPONIVEL", precisaCalibragem: !!form.precisaCalibragem, observacoes: form.observacoes||""
+    };
+    setFerramentas(function(prev){ return prev.concat([novo]); });
+    return window.__FOHAT_SB__.from("ferramentaria_ferramentas").insert({
+      id: novoId, nome: novo.nome, categoria: novo.categoria, marca: novo.marca||null, modelo: novo.modelo||null,
+      numero_patrimonio: novo.numeroPatrimonio||null, valor_aquisicao: novo.valorAquisicao, data_aquisicao: novo.dataAquisicao||null,
+      status: "DISPONIVEL", precisa_calibragem: novo.precisaCalibragem, observacoes: novo.observacoes||null
+    }).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("A ferramenta apareceu na tela, mas não foi salva no servidor."); return {ok:false, error:"Não foi possível salvar no servidor."}; }
+      return {ok:true};
+    });
+  }
+  function updateFerramenta(id, patch){
+    if (!canGerenciarCatalogoFerramentas()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    setFerramentas(function(prev){ return prev.map(function(f){ return f.id===id ? Object.assign({}, f, patch) : f; }); });
+    var dbPatch = {};
+    var map = {nome:"nome", categoria:"categoria", marca:"marca", modelo:"modelo", numeroPatrimonio:"numero_patrimonio",
+      valorAquisicao:"valor_aquisicao", dataAquisicao:"data_aquisicao", status:"status", precisaCalibragem:"precisa_calibragem", observacoes:"observacoes"};
+    Object.keys(patch).forEach(function(k){ if (map[k]) dbPatch[map[k]] = patch[k]; });
+    dbPatch.atualizado_em = new Date().toISOString();
+    return window.__FOHAT_SB__.from("ferramentaria_ferramentas").update(dbPatch).eq("id", id).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("Não foi possível salvar essa alteração da ferramenta no servidor."); return {ok:false}; }
+      return {ok:true};
+    });
+  }
+  function excluirFerramenta(id){
+    if (!canGerenciarCatalogoFerramentas()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    setFerramentas(function(prev){ return prev.filter(function(f){ return f.id!==id; }); });
+    return window.__FOHAT_SB__.from("ferramentaria_ferramentas").delete().eq("id", id).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("A ferramenta foi removida da tela, mas não pôde ser excluída no servidor — ela pode voltar a aparecer se a página for recarregada."); return {ok:false}; }
+      return {ok:true};
+    });
+  }
+
+  function retirarFerramenta(form){
+    if (!canRetirarFerramenta()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    var ferramenta = ferramentas.filter(function(f){ return f.id===form.ferramentaId; })[0];
+    if (!ferramenta) return Promise.resolve({ok:false, error:"Ferramenta não encontrada."});
+    if (ferramenta.status !== "DISPONIVEL") return Promise.resolve({ok:false, error:"Esta ferramenta não está disponível para retirada."});
+    var novoId = newDbId();
+    var agora = new Date().toISOString();
+    var nova = {
+      id: novoId, ferramentaId: form.ferramentaId, usuarioId: form.usuarioId || CURRENT_USER_ID, obraId: form.obraId || null,
+      reservaId: form.reservaId || null, retiradoEm: agora, previsaoDevolucao: form.previsaoDevolucao || null,
+      devolvidoEm: null, estadoDevolucao: null, observacoes: form.observacoes || ""
+    };
+    setRetiradas(function(prev){ return [nova].concat(prev); });
+    setFerramentas(function(prev){ return prev.map(function(f){ return f.id===form.ferramentaId ? Object.assign({}, f, {status:"EM_USO"}) : f; }); });
+    var sb = window.__FOHAT_SB__;
+    var tasks = [
+      sb.from("ferramentaria_retiradas").insert({
+        id: novoId, ferramenta_id: nova.ferramentaId, usuario_id: nova.usuarioId, obra_id: nova.obraId,
+        reserva_id: nova.reservaId, retirado_em: agora, previsao_devolucao: nova.previsaoDevolucao, observacoes: nova.observacoes || null
+      }).select(),
+      sb.from("ferramentaria_ferramentas").update({status:"EM_USO", atualizado_em: agora}).eq("id", form.ferramentaId).select()
+    ];
+    if (form.reservaId){
+      tasks.push(sb.from("ferramentaria_reservas").update({status:"CONVERTIDA"}).eq("id", form.reservaId).select());
+      setReservas(function(prev){ return prev.map(function(r){ return r.id===form.reservaId ? Object.assign({}, r, {status:"CONVERTIDA"}) : r; }); });
+    }
+    return Promise.all(tasks).then(function(results){
+      if (results.some(function(r){ return r.error || !r.data || !r.data.length; })){
+        reportSyncError("A retirada apareceu na tela, mas houve um problema ao salvar no servidor.");
+        return {ok:false};
+      }
+      return {ok:true};
+    });
+  }
+  function devolverFerramenta(retiradaId, opts){
+    opts = opts || {};
+    if (!hasFerramentariaAccess()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    var retirada = retiradas.filter(function(r){ return r.id===retiradaId; })[0];
+    if (!retirada || retirada.devolvidoEm) return Promise.resolve({ok:false, error:"Retirada não encontrada ou já devolvida."});
+    if (!isAlmoxAdmin() && retirada.usuarioId !== CURRENT_USER_ID) return Promise.resolve({ok:false, error:"Sem permissão para devolver esta ferramenta."});
+    var agora = new Date().toISOString();
+    var estado = opts.estadoDevolucao || "OK";
+    var novoStatusFerramenta = (estado==="DANIFICADA") ? "MANUTENCAO" : (estado==="PERDIDA") ? "EXTRAVIADA" : "DISPONIVEL";
+    setRetiradas(function(prev){ return prev.map(function(r){ return r.id===retiradaId ? Object.assign({}, r, {devolvidoEm:agora, estadoDevolucao:estado, observacoes: opts.observacoes || r.observacoes}) : r; }); });
+    setFerramentas(function(prev){ return prev.map(function(f){ return f.id===retirada.ferramentaId ? Object.assign({}, f, {status:novoStatusFerramenta}) : f; }); });
+    var sb = window.__FOHAT_SB__;
+    return Promise.all([
+      sb.from("ferramentaria_retiradas").update({devolvido_em:agora, estado_devolucao:estado, observacoes: opts.observacoes || retirada.observacoes || null}).eq("id", retiradaId).select(),
+      sb.from("ferramentaria_ferramentas").update({status:novoStatusFerramenta, atualizado_em: agora}).eq("id", retirada.ferramentaId).select()
+    ]).then(function(results){
+      if (results.some(function(r){ return r.error || !r.data || !r.data.length; })){
+        reportSyncError("A devolução apareceu na tela, mas houve um problema ao salvar no servidor.");
+        return {ok:false};
+      }
+      return {ok:true};
+    });
+  }
+  function reservarFerramenta(form){
+    if (!hasFerramentariaAccess()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    if (!form.dataInicio || !form.dataFim) return Promise.resolve({ok:false, error:"Informe o período da reserva."});
+    var usuarioId = form.usuarioId || CURRENT_USER_ID;
+    var motivo = motivoAutorizacaoReserva(usuarioId, form.ferramentaId, form.dataInicio, form.dataFim, null, reservas, retiradas);
+    var status = motivo ? "PENDENTE_AUTORIZACAO" : "AGENDADA";
+    var novoId = newDbId();
+    var nova = {id:novoId, ferramentaId:form.ferramentaId, usuarioId:usuarioId, obraId:form.obraId||null, dataInicio:form.dataInicio, dataFim:form.dataFim, status:status, criadaEm:new Date().toISOString()};
+    setReservas(function(prev){ return [nova].concat(prev); });
+    return window.__FOHAT_SB__.from("ferramentaria_reservas").insert({
+      id: novoId, ferramenta_id: nova.ferramentaId, usuario_id: nova.usuarioId, obra_id: nova.obraId,
+      data_inicio: nova.dataInicio, data_fim: nova.dataFim, status: nova.status
+    }).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("A reserva apareceu na tela, mas não foi salva no servidor."); return {ok:false}; }
+      return {ok:true, motivo: motivo};
+    });
+  }
+  function cancelarReserva(id){
+    var reserva = reservas.filter(function(r){ return r.id===id; })[0];
+    if (!canCancelarReserva(reserva)) return Promise.resolve({ok:false, error:"Sem permissão."});
+    setReservas(function(prev){ return prev.map(function(r){ return r.id===id ? Object.assign({}, r, {status:"CANCELADA"}) : r; }); });
+    return window.__FOHAT_SB__.from("ferramentaria_reservas").update({status:"CANCELADA"}).eq("id", id).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("Não foi possível cancelar a reserva no servidor."); return {ok:false}; }
+      return {ok:true};
+    });
+  }
+  function decidirAutorizacaoReserva(id, aprovar){
+    if (!isAlmoxAdmin()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    var novoStatus = aprovar ? "AGENDADA" : "NEGADA";
+    setReservas(function(prev){ return prev.map(function(r){ return r.id===id ? Object.assign({}, r, {status:novoStatus}) : r; }); });
+    return window.__FOHAT_SB__.from("ferramentaria_reservas").update({status:novoStatus}).eq("id", id).select().then(function(res){
+      if (res.error || !res.data || !res.data.length){ reportSyncError("Não foi possível salvar essa decisão no servidor."); return {ok:false}; }
       return {ok:true};
     });
   }
@@ -3439,6 +4365,28 @@ function App(){
   }, [demandas, projectsById]);
 
   var notifications = useMemo(function(){ return activityFeed.slice(0,6); }, [activityFeed]);
+
+  /* ============================== FERRAMENTARIA — dados derivados ============================== */
+  var ferramentasById = useMemo(function(){
+    var m = {}; ferramentas.forEach(function(f){ m[f.id]=f; }); return m;
+  }, [ferramentas]);
+  var equipamentosById = useMemo(function(){
+    var m = {}; equipamentos.forEach(function(eq){ m[eq.id]=eq; }); return m;
+  }, [equipamentos]);
+  var obrasFerramentariaById = useMemo(function(){
+    var m = {}; obras.forEach(function(o){ m[o.id]=o; }); return m;
+  }, [obras]);
+  var retiradaAtivaPorFerramenta = useMemo(function(){
+    var m = {}; retiradas.forEach(function(r){ if (!r.devolvidoEm) m[r.ferramentaId]=r; }); return m;
+  }, [retiradas]);
+  var ferramentariaStats = useMemo(function(){
+    var atrasadas = retiradas.filter(isRetiradaAtrasada).length;
+    var emUso = ferramentas.filter(function(f){ return f.status==="EM_USO"; }).length;
+    var disponiveis = ferramentas.filter(function(f){ return f.status==="DISPONIVEL"; }).length;
+    var emManutencao = ferramentas.filter(function(f){ return f.status==="MANUTENCAO"; }).length;
+    var pendentesAutorizacao = reservas.filter(function(r){ return r.status==="PENDENTE_AUTORIZACAO"; }).length;
+    return {total: ferramentas.length, disponiveis:disponiveis, emUso:emUso, emManutencao:emManutencao, atrasadas:atrasadas, pendentesAutorizacao:pendentesAutorizacao};
+  }, [ferramentas, retiradas, reservas]);
 
   function navigate(page){ setRoute({page:page}); }
   function openProject(id, tab){ setRoute({page:"projeto", projectId:id, projectTab: tab||"overview"}); }
@@ -3715,7 +4663,16 @@ function App(){
     can: can, canEditDemanda: canEditDemanda, canEditProject: canEditProject, canDeleteProject: canDeleteProject,
     canDeleteDemand: canDeleteDemand, canComment: canComment, verifyAuthPassword: verifyAuthPassword, logout: logout,
     addUsuario: addUsuario, updateUsuario: updateUsuario, updateProprioPerfil: updateProprioPerfil,
-    toggleUsuarioStatus: toggleUsuarioStatus, excluirUsuario: excluirUsuario
+    toggleUsuarioStatus: toggleUsuarioStatus, excluirUsuario: excluirUsuario,
+    workspace: workspace, setWorkspace: selectWorkspace, switchWorkspace: switchWorkspace,
+    aceitarTermosFerramentaria: aceitarTermosFerramentaria,
+    obras: obras, ferramentas: ferramentas, reservas: reservas, retiradas: retiradas,
+    manutencoes: manutencoes, equipamentos: equipamentos, equipamentoManutencoes: equipamentoManutencoes,
+    ferramentasById: ferramentasById, equipamentosById: equipamentosById, obrasFerramentariaById: obrasFerramentariaById,
+    retiradaAtivaPorFerramenta: retiradaAtivaPorFerramenta, ferramentariaStats: ferramentariaStats,
+    addObraFerramentaria: addObraFerramentaria, addFerramenta: addFerramenta, updateFerramenta: updateFerramenta, excluirFerramenta: excluirFerramenta,
+    retirarFerramenta: retirarFerramenta, devolverFerramenta: devolverFerramenta, reservarFerramenta: reservarFerramenta,
+    cancelarReserva: cancelarReserva, decidirAutorizacaoReserva: decidirAutorizacaoReserva
   };
 
   if (!authReady){
@@ -3730,6 +4687,14 @@ function App(){
   }
   if (!currentUser){
     return e(LoginScreen, {onLogin: login, loadError: dataError});
+  }
+
+  if (!workspace){
+    return e(WorkspaceSelectorScreen, {app:{currentUser:currentUser, setWorkspace:selectWorkspace, logout:logout}});
+  }
+
+  if (workspace==="ferramentaria" && currentUser.acessoFerramentaria && !currentUser.termosFerramentariaAceitos){
+    return e(TermosFerramentariaScreen, {app:{currentUser:currentUser, onAceitar:aceitarTermosFerramentaria, logout:logout}});
   }
 
   var detailDemanda = detailId ? demandas.find(function(d){ return d.id===detailId; }) : null;
@@ -3750,7 +4715,14 @@ function App(){
     page==="config" ? e(PageConfiguracoes) :
     page==="ajuda" ? e(PageAjuda) :
     page==="perfil" ? e(PagePerfil) :
-    e(PageInicio);
+    page==="ferr_dashboard" ? e(PageFerramentariaDashboard) :
+    page==="ferr_catalogo" ? e(PageFerramentas) :
+    page==="ferr_retiradas" ? e(PageRetiradasReservas) :
+    page==="ferr_manutencao" ? e(PageFerramentariaEmConstrucao, {titulo:"Manutenção"}) :
+    page==="ferr_equipamentos" ? e(PageFerramentariaEmConstrucao, {titulo:"Escritório"}) :
+    page==="ferr_calendario" ? e(PageFerramentariaEmConstrucao, {titulo:"Calendário"}) :
+    page==="ferr_equipe" ? e(PageFerramentariaEmConstrucao, {titulo:"Equipe"}) :
+    (workspace==="ferramentaria" ? e(PageFerramentariaDashboard) : e(PageInicio));
 
   return e(AppContext.Provider, {value:ctxValue},
     e("div", {className:"app"},

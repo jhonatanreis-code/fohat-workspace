@@ -3978,20 +3978,24 @@ function App(){
      RLS (tem_acesso_ferramentaria()) — quem não tem acesso recebe listas vazias, sem erro — então
      é seguro buscar sempre, mesmo para quem só usa o Workspace. */
   function refreshWorkspaceData(){
-    return Promise.all([fetchWorkspaceSnapshot(), fetchFerramentariaSnapshot()]).then(function(results){
-      var snap = results[0], ferrSnap = results[1];
+    return fetchWorkspaceSnapshot().then(function(snap){
       USERS = snap.profiles;
       setProjects(snap.projects);
       setDemandas(snap.demandas);
-      setObras(ferrSnap.obras);
-      setFerramentas(ferrSnap.ferramentas);
-      setReservas(ferrSnap.reservas);
-      setRetiradas(ferrSnap.retiradas);
-      setManutencoes(ferrSnap.manutencoes);
-      setEquipamentos(ferrSnap.equipamentos);
-      setEquipamentoManutencoes(ferrSnap.equipamentoManutencoes);
       setDataError("");
       bumpUsers();
+      /* Ferramentaria busca à parte, e um erro aqui NUNCA derruba a Gestão de Demandas — por
+         exemplo, antes de rodar schema_ferramentaria.sql no banco, essas tabelas ainda não
+         existem, e mesmo assim o Workspace precisa continuar funcionando normalmente. */
+      return fetchFerramentariaSnapshot().then(function(ferrSnap){
+        setObras(ferrSnap.obras);
+        setFerramentas(ferrSnap.ferramentas);
+        setReservas(ferrSnap.reservas);
+        setRetiradas(ferrSnap.retiradas);
+        setManutencoes(ferrSnap.manutencoes);
+        setEquipamentos(ferrSnap.equipamentos);
+        setEquipamentoManutencoes(ferrSnap.equipamentoManutencoes);
+      }, function(){ /* Ferramentaria ainda não migrada nesse banco, ou usuário sem acesso — segue sem ela. */ });
     });
   }
 

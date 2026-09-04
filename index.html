@@ -628,6 +628,7 @@ var ICON_PATHS = {
   more: ["M5 12h.01", "M12 12h.01", "M19 12h.01"],
   wrench: ["M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"],
   box: ["M3 8 12 4 21 8 21 16 12 20 3 16z", "M3 8 12 12 21 8", "M12 12v8"],
+  camera: ["M4 8.5h3.2L9 6h6l1.8 2.5H20a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5a1 1 0 0 1 1-1z", "M12 16.2a3.7 3.7 0 1 0 0-7.4 3.7 3.7 0 0 0 0 7.4z"],
   mail: ["M4 6h16v12H4z", "M4.5 6.5 12 13l7.5-6.5"],
   lock: ["M6.5 11V8a5.5 5.5 0 0 1 11 0v3", "M5.5 11h13v9h-13z"],
   eye: ["M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z", "M12 14.7a2.7 2.7 0 1 0 0-5.4 2.7 2.7 0 0 0 0 5.4z"],
@@ -985,7 +986,7 @@ function mapFerramentaFromDb(row){
     id: row.id, nome: row.nome, categoria: row.categoria, marca: row.marca || "", modelo: row.modelo || "",
     numeroPatrimonio: row.numero_patrimonio || "", valorAquisicao: row.valor_aquisicao, dataAquisicao: row.data_aquisicao,
     status: row.status, precisaCalibragem: !!row.precisa_calibragem, observacoes: row.observacoes || "",
-    criadoEm: row.criado_em, atualizadoEm: row.atualizado_em
+    imagemUrl: row.imagem_url || "", criadoEm: row.criado_em, atualizadoEm: row.atualizado_em
   };
 }
 function mapReservaFromDb(row){
@@ -3494,23 +3495,63 @@ function FerramentaFormModal(props){
   var f = props.ferramenta;
   var st = useState(editing
     ? {nome:f.nome, categoria:f.categoria, marca:f.marca||"", modelo:f.modelo||"", numeroPatrimonio:f.numeroPatrimonio||"",
-       valorAquisicao:f.valorAquisicao||"", dataAquisicao:f.dataAquisicao||"", precisaCalibragem:!!f.precisaCalibragem, observacoes:f.observacoes||""}
-    : {nome:"", categoria:FERRAMENTA_CATEGORIAS[0], marca:"", modelo:"", numeroPatrimonio:"", valorAquisicao:"", dataAquisicao:"", precisaCalibragem:false, observacoes:""});
+       valorAquisicao:f.valorAquisicao||"", dataAquisicao:f.dataAquisicao||"", precisaCalibragem:!!f.precisaCalibragem, observacoes:f.observacoes||"", imagemUrl:f.imagemUrl||""}
+    : {nome:"", categoria:FERRAMENTA_CATEGORIAS[0], marca:"", modelo:"", numeroPatrimonio:"", valorAquisicao:"", dataAquisicao:"", precisaCalibragem:false, observacoes:"", imagemUrl:""});
   var form = st[0], setForm = st[1];
   var errorState = useState(""); var error = errorState[0], setError = errorState[1];
+  var savingState = useState(false); var saving = savingState[0], setSaving = savingState[1];
+  var imagemFileState = useState(null); var imagemFile = imagemFileState[0], setImagemFile = imagemFileState[1];
+  var imagemPreviewState = useState(""); var imagemPreview = imagemPreviewState[0], setImagemPreview = imagemPreviewState[1];
   function set(k,v){ var next=Object.assign({},form); next[k]=v; setForm(next); }
+  function escolherImagem(ev){
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    setImagemFile(file);
+    setImagemPreview(URL.createObjectURL(file));
+  }
+  function removerImagem(){
+    setImagemFile(null);
+    setImagemPreview("");
+    set("imagemUrl", "");
+  }
   function submit(){
     if (!form.nome.trim()){ setError("Informe o nome da ferramenta."); return; }
-    var payload = Object.assign({}, form, {valorAquisicao: form.valorAquisicao ? Number(form.valorAquisicao) : null, dataAquisicao: form.dataAquisicao || null});
-    var res = editing ? app.updateFerramenta(f.id, payload) : app.addFerramenta(payload);
-    Promise.resolve(res).then(function(r){ if (r && r.ok===false){ setError(r.error||"Não foi possível salvar."); return; } props.onClose(); });
+    setSaving(true); setError("");
+    var uploadP = imagemFile ? app.uploadFerramentaImagem(imagemFile) : Promise.resolve({ok:true, url: form.imagemUrl || ""});
+    uploadP.then(function(upRes){
+      if (!upRes.ok){ setSaving(false); setError(upRes.error || "Não foi possível enviar a imagem."); return; }
+      var payload = Object.assign({}, form, {
+        valorAquisicao: form.valorAquisicao ? Number(form.valorAquisicao) : null,
+        dataAquisicao: form.dataAquisicao || null,
+        imagemUrl: upRes.url || ""
+      });
+      var res = editing ? app.updateFerramenta(f.id, payload) : app.addFerramenta(payload);
+      Promise.resolve(res).then(function(r){
+        setSaving(false);
+        if (r && r.ok===false){ setError(r.error||"Não foi possível salvar."); return; }
+        props.onClose();
+      });
+    });
   }
+  var fotoAtual = imagemPreview || form.imagemUrl;
   return e(Modal, {title: editing ? "Editar ferramenta" : "Nova ferramenta", onClose:props.onClose,
     footer: e(React.Fragment, null,
-      e("button", {className:"btn secondary", onClick:props.onClose}, "Cancelar"),
-      e("button", {className:"btn", onClick:submit}, e(Icon,{name:editing?"check":"plus",size:14}), editing ? "Salvar alterações" : "Cadastrar")
+      e("button", {className:"btn secondary", onClick:props.onClose, disabled:saving}, "Cancelar"),
+      e("button", {className:"btn", onClick:submit, disabled:saving}, e(Icon,{name:editing?"check":"plus",size:14}), saving ? "Salvando..." : (editing ? "Salvar alterações" : "Cadastrar"))
     )},
     error ? e("div", {className:"confirm-box", style:{background:"var(--red-soft)", borderColor:"var(--red)"}}, error) : null,
+    e("div", {className:"field"}, e("label",null,"Foto da ferramenta"),
+      e("div", {style:{display:"flex", gap:14, alignItems:"center"}},
+        fotoAtual
+          ? e("img", {src:fotoAtual, style:{width:72,height:72,objectFit:"cover",borderRadius:10,border:"1px solid var(--border)"}})
+          : e("div", {style:{width:72,height:72,borderRadius:10,background:"var(--surface-2)",border:"1px solid var(--border)",display:"flex",alignItems:"center",justifyContent:"center",color:"var(--text-3)"}}, e(Icon,{name:"camera",size:24})),
+        e("div", null,
+          e("input", {type:"file", accept:"image/*", onChange:escolherImagem}),
+          fotoAtual ? e("div", {style:{marginTop:6}}, e("button", {type:"button", className:"btn secondary sm", onClick:removerImagem}, "Remover foto")) : null,
+          e("div", {className:"hint", style:{marginTop:4}}, "JPG ou PNG, até 5 MB.")
+        )
+      )
+    ),
     e("div", {className:"field"}, e("label",null,"Nome"),
       e("input", {type:"text", value:form.nome, placeholder:"Ex.: Furadeira de Impacto Bosch GSB 550", onChange:function(ev){set("nome",ev.target.value);}})),
     e("div", {className:"field-row"},
@@ -3540,10 +3581,22 @@ function FerramentaFormModal(props){
   );
 }
 
+/* Miniatura da ferramenta: mostra a foto cadastrada, ou o ícone de chave inglesa como
+   placeholder quando não há foto (mesma ideia do Avatar de usuário, que também cai para
+   iniciais quando não há imagem). */
+function FerramentaThumb(props){
+  var size = props.size || 36;
+  return props.url
+    ? e("img", {src:props.url, style:{width:size, height:size, objectFit:"cover", borderRadius:8, border:"1px solid var(--border)", flex:"0 0 auto"}})
+    : e("div", {style:{width:size, height:size, borderRadius:8, background:"var(--surface-2)", border:"1px solid var(--border)",
+        display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text-3)", flex:"0 0 auto"}}, e(Icon,{name:"wrench", size:Math.round(size*0.45)}));
+}
+
 function PageFerramentas(){
   var app = useApp();
   var modalState = useState(null); var modal = modalState[0], setModal = modalState[1];
   var searchState = useState(""); var search = searchState[0], setSearch = searchState[1];
+  var viewState = useState("list"); var view = viewState[0], setView = viewState[1];
   var podeGerenciar = canGerenciarCatalogoFerramentas();
   var rows = app.ferramentas.filter(function(f){
     var q = search.trim().toLowerCase();
@@ -3554,20 +3607,68 @@ function PageFerramentas(){
     if (!window.confirm("Excluir \"" + f.nome + "\" do catálogo? Esta ação não pode ser desfeita.")) return;
     app.excluirFerramenta(f.id);
   }
+  var byStatus = {};
+  FERRAMENTA_STATUS_ORDER.forEach(function(s){ byStatus[s] = []; });
+  rows.forEach(function(f){ (byStatus[f.status] || (byStatus[f.status]=[])).push(f); });
+
   return e("div", {className:"content-narrow"},
     e(PageHead, {title:"Ferramentas", subtitle:"Catálogo de ferramentas da " + FERRAMENTARIA_LOCAL_LABEL + ".",
       actions: podeGerenciar ? [e("button",{key:"nf", className:"btn", onClick:function(){ setModal({mode:"create"}); }}, e(Icon,{name:"plus",size:14}), "Nova ferramenta")] : []}),
     !podeGerenciar ? e("div", {className:"readonly-banner"}, e(Icon,{name:"lock",size:14}), "Somente o almoxarife administrador pode cadastrar, editar ou excluir ferramentas do catálogo.") : null,
-    e("div", {className:"field", style:{maxWidth:320, marginBottom:14}},
-      e("input", {type:"text", placeholder:"Buscar por nome, marca ou patrimônio...", value:search, onChange:function(ev){setSearch(ev.target.value);}})),
-    rows.length ? e("div", {className:"simple-table-wrap"},
+    e("div", {style:{display:"flex", gap:12, alignItems:"center", flexWrap:"wrap", marginBottom:14}},
+      e("div", {className:"field", style:{maxWidth:320, marginBottom:0, flex:"1 1 260px"}},
+        e("input", {type:"text", placeholder:"Buscar por nome, marca ou patrimônio...", value:search, onChange:function(ev){setSearch(ev.target.value);}})),
+      e(ViewToggle, {value:view, onChange:setView, options:[{id:"list",label:"Lista",icon:"list"},{id:"kanban",label:"Kanban",icon:"layout"}]})
+    ),
+    !rows.length ? e(EmptyState, {icon:"wrench", text: search ? "Nenhuma ferramenta encontrada para essa busca." : "Nenhuma ferramenta cadastrada ainda."})
+    : view === "kanban" ? e("div", {className:"kanban-scroll"},
+        e("div", {className:"kanban-board"},
+          FERRAMENTA_STATUS_ORDER.map(function(s){
+            var items = byStatus[s] || [];
+            var meta = FERRAMENTA_STATUS_META[s];
+            return e("div", {key:s, className:"kanban-col"},
+              e("div", {className:"kanban-col-head"},
+                e("span", {className:"pill-dot", style:{color:meta.color, background:"none"}}),
+                e("h4", null, meta.label),
+                e("span", {className:"kanban-count"}, items.length)
+              ),
+              e("div", {className:"kanban-col-body"},
+                items.length ? items.map(function(f){
+                  return e("div", {key:f.id, className:"kanban-card", style:{borderLeftColor:meta.color, cursor: podeGerenciar ? "pointer" : "default"},
+                      onClick: podeGerenciar ? function(){ setModal({mode:"edit", ferramenta:f}); } : undefined},
+                    e("div", {style:{display:"flex", gap:8, alignItems:"center"}},
+                      e(FerramentaThumb, {url:f.imagemUrl, size:34}),
+                      e("div", {style:{minWidth:0}},
+                        e("div", {className:"kc-title"}, f.nome),
+                        (f.marca||f.modelo) ? e("div", {className:"kc-proj"}, [f.marca,f.modelo].filter(Boolean).join(" · ")) : null
+                      )
+                    ),
+                    e("div", {className:"kc-footer"},
+                      e("span", {className:"pill", style:{background:"var(--surface-2)", color:"var(--text-2)"}}, f.categoria),
+                      f.precisaCalibragem ? e("span",{className:"pill", style:{background:"var(--bronze-soft)", color:"var(--bronze)"}}, "Calibragem") : e("span", null)
+                    ),
+                    podeGerenciar ? e("div", {style:{display:"flex", gap:6, marginTop:2}},
+                      e("button", {className:"iconbtn", title:"Editar", onClick:function(ev){ ev.stopPropagation(); setModal({mode:"edit", ferramenta:f}); }}, e(Icon,{name:"edit",size:13})),
+                      e("button", {className:"iconbtn", title:"Excluir", onClick:function(ev){ ev.stopPropagation(); excluir(f); }}, e(Icon,{name:"trash",size:13}))
+                    ) : null
+                  );
+                }) : e("div", {className:"col-empty"}, "Nenhuma ferramenta")
+              )
+            );
+          })
+        )
+      )
+    : e("div", {className:"simple-table-wrap"},
       e("table", {className:"demandas"},
         e("thead", null, e("tr", null,
           e("th",null,"Ferramenta"), e("th",null,"Categoria"), e("th",null,"Patrimônio"), e("th",null,"Status"), e("th",null,"Calibragem"), podeGerenciar ? e("th",null,"Ações") : null
         )),
         e("tbody", null, rows.map(function(f){
           return e("tr", {key:f.id},
-            e("td", null, e("b",null,f.nome), f.marca||f.modelo ? e("div",{style:{color:"var(--text-3)", fontSize:11.5}}, [f.marca,f.modelo].filter(Boolean).join(" · ")) : null),
+            e("td", null, e("div", {style:{display:"flex", gap:9, alignItems:"center"}},
+              e(FerramentaThumb, {url:f.imagemUrl}),
+              e("div", null, e("b",null,f.nome), f.marca||f.modelo ? e("div",{style:{color:"var(--text-3)", fontSize:11.5}}, [f.marca,f.modelo].filter(Boolean).join(" · ")) : null)
+            )),
             e("td", null, f.categoria),
             e("td", null, f.numeroPatrimonio || "—"),
             e("td", null, e(MetaPill, {meta: FERRAMENTA_STATUS_META[f.status] || FERRAMENTA_STATUS_META.DISPONIVEL})),
@@ -3579,7 +3680,7 @@ function PageFerramentas(){
           );
         }))
       )
-    ) : e(EmptyState, {icon:"wrench", text: search ? "Nenhuma ferramenta encontrada para essa busca." : "Nenhuma ferramenta cadastrada ainda."}),
+    ),
     modal && (modal.mode==="create"||modal.mode==="edit") ? e(FerramentaFormModal, {ferramenta:modal.ferramenta, onClose:function(){ setModal(null); }}) : null
   );
 }
@@ -4186,13 +4287,13 @@ function App(){
     var novo = {
       id: novoId, nome: form.nome, categoria: form.categoria, marca: form.marca||"", modelo: form.modelo||"",
       numeroPatrimonio: form.numeroPatrimonio||"", valorAquisicao: form.valorAquisicao||null, dataAquisicao: form.dataAquisicao||null,
-      status: "DISPONIVEL", precisaCalibragem: !!form.precisaCalibragem, observacoes: form.observacoes||""
+      status: "DISPONIVEL", precisaCalibragem: !!form.precisaCalibragem, observacoes: form.observacoes||"", imagemUrl: form.imagemUrl||""
     };
     setFerramentas(function(prev){ return prev.concat([novo]); });
     return window.__FOHAT_SB__.from("ferramentaria_ferramentas").insert({
       id: novoId, nome: novo.nome, categoria: novo.categoria, marca: novo.marca||null, modelo: novo.modelo||null,
       numero_patrimonio: novo.numeroPatrimonio||null, valor_aquisicao: novo.valorAquisicao, data_aquisicao: novo.dataAquisicao||null,
-      status: "DISPONIVEL", precisa_calibragem: novo.precisaCalibragem, observacoes: novo.observacoes||null
+      status: "DISPONIVEL", precisa_calibragem: novo.precisaCalibragem, observacoes: novo.observacoes||null, imagem_url: novo.imagemUrl||null
     }).select().then(function(res){
       if (res.error || !res.data || !res.data.length){ reportSyncError("A ferramenta apareceu na tela, mas não foi salva no servidor."); return {ok:false, error:"Não foi possível salvar no servidor."}; }
       return {ok:true};
@@ -4203,12 +4304,33 @@ function App(){
     setFerramentas(function(prev){ return prev.map(function(f){ return f.id===id ? Object.assign({}, f, patch) : f; }); });
     var dbPatch = {};
     var map = {nome:"nome", categoria:"categoria", marca:"marca", modelo:"modelo", numeroPatrimonio:"numero_patrimonio",
-      valorAquisicao:"valor_aquisicao", dataAquisicao:"data_aquisicao", status:"status", precisaCalibragem:"precisa_calibragem", observacoes:"observacoes"};
+      valorAquisicao:"valor_aquisicao", dataAquisicao:"data_aquisicao", status:"status", precisaCalibragem:"precisa_calibragem",
+      observacoes:"observacoes", imagemUrl:"imagem_url"};
     Object.keys(patch).forEach(function(k){ if (map[k]) dbPatch[map[k]] = patch[k]; });
     dbPatch.atualizado_em = new Date().toISOString();
     return window.__FOHAT_SB__.from("ferramentaria_ferramentas").update(dbPatch).eq("id", id).select().then(function(res){
       if (res.error || !res.data || !res.data.length){ reportSyncError("Não foi possível salvar essa alteração da ferramenta no servidor."); return {ok:false}; }
       return {ok:true};
+    });
+  }
+  /* Upload da foto da ferramenta: vai para o bucket público "ferramentaria-fotos" do Supabase
+     Storage (criado junto da migração de imagens). Devolve {ok:true, url} com a URL pública para
+     gravar em ferramentaria_ferramentas.imagem_url, ou {ok:false, error} sem nunca rejeitar —
+     mesmo padrão das demais ações da Ferramentaria. */
+  function uploadFerramentaImagem(file){
+    if (!canGerenciarCatalogoFerramentas()) return Promise.resolve({ok:false, error:"Sem permissão."});
+    if (!file) return Promise.resolve({ok:false, error:"Nenhuma imagem selecionada."});
+    if (!/^image\//.test(file.type)) return Promise.resolve({ok:false, error:"Selecione um arquivo de imagem (JPG, PNG, etc.)."});
+    if (file.size > 5*1024*1024) return Promise.resolve({ok:false, error:"A imagem deve ter no máximo 5 MB."});
+    var extMatch = /\.([a-zA-Z0-9]+)$/.exec(file.name||"");
+    var ext = (extMatch ? extMatch[1] : "jpg").toLowerCase().replace(/[^a-z0-9]/g,"") || "jpg";
+    var path = newDbId() + "." + ext;
+    return window.__FOHAT_SB__.storage.from("ferramentaria-fotos").upload(path, file, {upsert:false, cacheControl:"3600"}).then(function(res){
+      if (res.error) return {ok:false, error:"Não foi possível enviar a imagem para o servidor."};
+      var pub = window.__FOHAT_SB__.storage.from("ferramentaria-fotos").getPublicUrl(path);
+      return {ok:true, url: pub && pub.data && pub.data.publicUrl};
+    }, function(){
+      return {ok:false, error:"Não foi possível conectar ao servidor."};
     });
   }
   function excluirFerramenta(id){
@@ -4675,6 +4797,7 @@ function App(){
     ferramentasById: ferramentasById, equipamentosById: equipamentosById, obrasFerramentariaById: obrasFerramentariaById,
     retiradaAtivaPorFerramenta: retiradaAtivaPorFerramenta, ferramentariaStats: ferramentariaStats,
     addObraFerramentaria: addObraFerramentaria, addFerramenta: addFerramenta, updateFerramenta: updateFerramenta, excluirFerramenta: excluirFerramenta,
+    uploadFerramentaImagem: uploadFerramentaImagem,
     retirarFerramenta: retirarFerramenta, devolverFerramenta: devolverFerramenta, reservarFerramenta: reservarFerramenta,
     cancelarReserva: cancelarReserva, decidirAutorizacaoReserva: decidirAutorizacaoReserva
   };

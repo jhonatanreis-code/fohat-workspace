@@ -157,6 +157,8 @@
     .sidebar.mobile-open{transform:translateX(0);}
     .sidebar-scrim.show{display:block;}
     .sidebar-collapse-btn{display:none;}
+    .sidebar-top{padding-top:calc(14px + env(safe-area-inset-top,0px)); padding-left:calc(14px + env(safe-area-inset-left,0px));}
+    .sidebar-bottom{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));}
   }
 
   /* Header */
@@ -164,6 +166,9 @@
   .topheader{
     height:60px; flex:0 0 auto; background:var(--surface); border-bottom:1px solid var(--border);
     display:flex; align-items:center; gap:14px; padding:0 18px; position:relative; z-index:20;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-left:calc(18px + env(safe-area-inset-left,0px));
+    padding-right:calc(18px + env(safe-area-inset-right,0px));
   }
   .hamburger{display:none; background:none; border:none; color:var(--text-2); cursor:pointer; padding:6px;}
   @media (max-width:880px){.hamburger{display:flex;}}
